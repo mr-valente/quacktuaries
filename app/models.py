@@ -58,6 +58,7 @@ class Player(Base):
     id = Column(String, primary_key=True, default=_uuid)
     session_id = Column(String, ForeignKey("sessions.id"), nullable=False)
     name = Column(String, nullable=False)
+    rejoin_token = Column(String(32), nullable=False)  # secret token for reconnecting
     score = Column(Integer, nullable=False, default=0)
     turns_used = Column(Integer, nullable=False, default=0)
     budget_used = Column(Integer, nullable=False, default=0)

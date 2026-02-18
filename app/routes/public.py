@@ -3,6 +3,7 @@
 import json
 import os
 import re
+import secrets
 import markdown
 from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -99,18 +100,35 @@ def join_session(
     # Check if player already exists (by name in this session)
     existing = db.query(Player).filter_by(session_id=session.id, name=player_name).first()
     if existing:
-        # Re-join: set cookie and redirect
+        # Re-join: verify the rejoin token from the cookie
+        cookie_token = request.session.get("rejoin_token")
+        if cookie_token != existing.rejoin_token:
+            return templates.TemplateResponse(
+                "join.html",
+                {"request": request, "error": "That name is already taken in this session."},
+                status_code=400,
+            )
         request.session["player_id"] = existing.id
         request.session["session_id"] = session.id
         return RedirectResponse(url=f"/s/{session.id}", status_code=303)
 
-    player = Player(session_id=session.id, name=player_name)
+    # Block new player creation once the game is active (prevents multi-accounting)
+    if session.status == "active":
+        return templates.TemplateResponse(
+            "join.html",
+            {"request": request, "error": "This game is already in progress. New players can only join during the lobby."},
+            status_code=400,
+        )
+
+    rejoin_token = secrets.token_hex(16)
+    player = Player(session_id=session.id, name=player_name, rejoin_token=rejoin_token)
     db.add(player)
     db.commit()
     db.refresh(player)
 
     request.session["player_id"] = player.id
     request.session["session_id"] = session.id
+    request.session["rejoin_token"] = rejoin_token
 
     return RedirectResponse(url=f"/s/{session.id}", status_code=303)
 

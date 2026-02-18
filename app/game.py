@@ -103,13 +103,7 @@ def execute_test(
         raise GameError(f"Insufficient inspection budget (have {session.test_budget - player.budget_used}, need {n}).")
 
     # Block inspecting a batch that already has a sold policy
-    existing_sell = (
-        db.query(Event)
-        .filter_by(player_id=player.id, session_id=session.id, type="SELL")
-        .filter(Event.payload_json.contains(f'"device_id": {device_id}'))
-        .first()
-    )
-    if existing_sell:
+    if _has_sold_device(db, player.id, session.id, device_id):
         raise GameError(f"You've already sold a policy on Batch {device_id}. No need to inspect it further!")
 
     p_i = ps[device_id]
@@ -197,13 +191,7 @@ def execute_sell(
             raise GameError("You must inspect this batch at least once before selling a policy on it.")
 
     # Check one-policy-per-batch limit
-    existing_sell = (
-        db.query(Event)
-        .filter_by(player_id=player.id, session_id=session.id, type="SELL")
-        .filter(Event.payload_json.contains(f'"device_id": {device_id}'))
-        .first()
-    )
-    if existing_sell:
+    if _has_sold_device(db, player.id, session.id, device_id):
         raise GameError(f"You've already sold a policy on Batch {device_id}. One policy per batch!")
 
     p_i = ps[device_id]
@@ -253,6 +241,24 @@ def execute_sell(
 
 class GameError(Exception):
     """Raised when a game rule is violated."""
+
+
+def _has_sold_device(db: DBSession, player_id: str, session_id: str, device_id: int) -> bool:
+    """Check whether a player has already sold a policy on a specific device.
+
+    Uses proper JSON parsing instead of substring matching to avoid
+    false positives (e.g. device_id 1 matching device_id 10).
+    """
+    sell_events = (
+        db.query(Event)
+        .filter_by(player_id=player_id, session_id=session_id, type="SELL")
+        .all()
+    )
+    for e in sell_events:
+        payload = json.loads(e.payload_json)
+        if payload.get("device_id") == device_id:
+            return True
+    return False
 
 
 def _session_settings(session: Session) -> dict:
