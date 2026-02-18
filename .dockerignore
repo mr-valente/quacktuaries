@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+*.db
+.venv/
+venv/
+.git/
+.gitignore
+.idea/
+.vscode/
+tests/
+*.md
+docker-compose.yml
+Caddyfile

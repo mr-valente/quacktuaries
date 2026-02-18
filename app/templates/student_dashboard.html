@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Quacktuaries{% endblock %}
+{% block container_class %}container-wide{% endblock %}
+
+{% block nav_links %}
+  <a href="/">Home</a>
+  <span style="color:var(--text-muted);">|</span>
+  <span style="color:var(--text-muted); font-size:0.85rem;">{{ player.name }}</span>
+{% endblock %}
+
+{% block content %}
+{# Status banner #}
+{% if session.status == "lobby" %}
+<div class="alert alert-info">⏳ Waiting for the teacher to start the game. Sit tight!</div>
+{% elif session.status == "ended" %}
+<div class="alert alert-error">🏁 This game has ended. Final scores are below.</div>
+{% endif %}
+
+{# Flash messages #}
+{% if error %}
+<div class="alert alert-error">{{ error }}</div>
+{% endif %}
+{% if success %}
+<div class="alert alert-success">{{ success }}</div>
+{% endif %}
+
+{# Stats row #}
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-value">{{ player.score }}</div>
+    <div class="stat-label">Score</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ session.max_turns - player.turns_used }}</div>
+    <div class="stat-label">Turns Left</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ session.test_budget - player.budget_used }}</div>
+    <div class="stat-label">Budget Left</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">
+      <span class="badge badge-{{ session.status }}">{{ session.status | upper }}</span>
+    </div>
+    <div class="stat-label">Status</div>
+  </div>
+</div>
+
+<div class="grid-2">
+  {# Left column: Batches + Actions #}
+  <div>
+    {# Batch table #}
+    <div class="card">
+      <h3>🦆 Duck Batches</h3>
+      <table>
+        <thead>
+          <tr><th>Batch #</th><th>Inspected</th><th>n total</th><th>x defective</th><th>x/n</th><th>Policy</th></tr>
+        </thead>
+        <tbody>
+          {% for d in devices %}
+          <tr>
+            <td><strong>📦 {{ d.device_id }}</strong></td>
+            <td>{% if d.tested %}✅{% else %}—{% endif %}</td>
+            <td>{{ d.n_total }}</td>
+            <td>{{ d.x_total }}</td>
+            <td>{% if d.n_total > 0 %}{{ "%.3f" | format(d.x_total / d.n_total) }}{% else %}—{% endif %}</td>
+            <td>{% if d.sold %}📋 Sold{% else %}—{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if session.status == "active" and player.turns_used < session.max_turns %}
+    {# Inspect form #}
+    <div class="card">
+      <h3>🔍 Inspect a Batch</h3>
+      <form method="post" action="/session/{{ session.id }}/test">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="test_device">Batch</label>
+            <select id="test_device" name="device_id" class="form-control">
+              {% for d in devices %}
+              {% if not d.sold %}
+              <option value="{{ d.device_id }}">Batch {{ d.device_id }}</option>
+              {% endif %}
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="test_n">Sample Size (n ducks)</label>
+            <input type="number" id="test_n" name="n" class="form-control"
+                   min="{{ session.min_n }}" max="{{ session.max_n }}"
+                   value="{{ session.min_n }}" required>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;">🔍 Inspect Ducks</button>
+      </form>
+    </div>
+
+    {# Sell form #}
+    <div class="card">
+      <h3>💰 Sell a Policy</h3>
+      <form method="post" action="/session/{{ session.id }}/sell">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="sell_device">Batch</label>
+            <select id="sell_device" name="device_id" class="form-control">
+              {% for d in devices %}
+              {% if not d.sold %}
+              <option value="{{ d.device_id }}">Batch {{ d.device_id }}</option>
+              {% endif %}
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="sell_conf">Confidence</label>
+            <select id="sell_conf" name="confidence" class="form-control">
+              {% for c in confidence_levels %}
+              <option value="{{ c }}">{{ c }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="sell_L">Lower Bound (L)</label>
+            <input type="number" id="sell_L" name="lower" class="form-control"
+                   min="0" max="1" step="0.01" value="0.20" required>
+          </div>
+          <div class="form-group">
+            <label for="sell_U">Upper Bound (U)</label>
+            <input type="number" id="sell_U" name="upper" class="form-control"
+                   min="0" max="1" step="0.01" value="0.80" required>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-warning" style="width:100%;">📋 Sell Policy</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+
+  {# Right column: Leaderboard + Event Log #}
+  <div>
+    <div class="card">
+      <h3>🏆 Leaderboard</h3>
+      <table>
+        <thead><tr><th>#</th><th>Name</th><th>Score</th><th>Turns</th></tr></thead>
+        <tbody>
+          {% for entry in leaderboard %}
+          <tr{% if entry.player_id == player.id %} style="background:var(--surface2);"{% endif %}>
+            <td>{{ entry.rank }}</td>
+            <td>{{ entry.name }}{% if entry.player_id == player.id %} <strong>(you)</strong>{% endif %}</td>
+            <td><strong>{{ entry.score }}</strong></td>
+            <td>{{ entry.turns_used }}</td>
+          </tr>
+          {% endfor %}
+          {% if not leaderboard %}
+          <tr><td colspan="4" style="color:var(--text-muted);">No players yet.</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>📋 Event Log</h3>
+      <div class="event-log">
+        {% for e in events %}
+        <div class="event-item">
+          <span class="event-type event-type-{{ e.type }}">{% if e.type == "TEST" %}INSPECT{% else %}{{ e.type }}{% endif %}</span>
+          {% if e.type == "TEST" %}
+            Batch {{ e.payload.device_id }}: {{ e.payload.x }}/{{ e.payload.n }} defective ducks 🦆
+          {% elif e.type == "SELL" %}
+            Batch {{ e.payload.device_id }} [{{ e.payload.L }}, {{ e.payload.U }}]
+            @ {{ e.payload.confidence }} →
+            {% if e.payload.hit %}✅ HIT{% else %}❌ MISS{% endif %}
+          {% endif %}
+          {% if e.delta_score != 0 %}
+            <span class="event-delta {% if e.delta_score > 0 %}positive{% else %}negative{% endif %}">
+              {% if e.delta_score > 0 %}+{% endif %}{{ e.delta_score }}
+            </span>
+          {% endif %}
+        </div>
+        {% endfor %}
+        {% if not events %}
+        <div style="color:var(--text-muted); font-size:0.85rem;">No events yet. Start inspecting duck batches!</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

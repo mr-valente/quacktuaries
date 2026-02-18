@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Teacher Dashboard — Quacktuaries{% endblock %}
+
+{% block nav_links %}
+  <a href="/admin/dashboard">Dashboard</a>
+  <a href="/admin/sessions/new">+ New Session</a>
+  <a href="/admin/logout">Logout</a>
+{% endblock %}
+
+{% block content %}
+<h2 style="margin-bottom:1.5rem;">📋 Sessions</h2>
+
+<div style="margin-bottom:1.5rem;">
+  <a href="/admin/sessions/new" class="btn btn-primary">+ Create New Session</a>
+</div>
+
+{% if sessions %}
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Join Code</th>
+        <th>Status</th>
+        <th>Players</th>
+        <th>Batches</th>
+        <th>Created</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in sessions %}
+      <tr>
+        <td><span class="join-code" style="font-size:1rem; padding:0.2rem 0.5rem;">{{ s.join_code }}</span></td>
+        <td><span class="badge badge-{{ s.status }}">{{ s.status | upper }}</span></td>
+        <td>{{ s.players | length }}</td>
+        <td>{{ s.device_count }}</td>
+        <td style="color:var(--text-muted); font-size:0.85rem;">{{ s.created_at.strftime('%b %d, %H:%M') if s.created_at else '—' }}</td>
+        <td><a href="/admin/s/{{ s.id }}" class="btn btn-primary btn-sm">Manage</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card" style="text-align:center; color:var(--text-muted); padding:3rem;">
+  <p>No sessions yet. Create one to get started!</p>
+</div>
+{% endif %}
+{% endblock %}

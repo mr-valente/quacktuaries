@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Session {{ session.join_code }} — Quacktuaries{% endblock %}
+{% block container_class %}container-wide{% endblock %}
+
+{% block nav_links %}
+  <a href="/admin/dashboard">Dashboard</a>
+  <a href="/admin/sessions/new">+ New</a>
+  <a href="/admin/logout">Logout</a>
+{% endblock %}
+
+{% block content %}
+<div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem; flex-wrap:wrap;">
+  <h2 style="margin:0;">Session</h2>
+  <span class="join-code" style="font-size:1.5rem;">{{ session.join_code }}</span>
+  <span class="badge badge-{{ session.status }}" style="font-size:0.9rem; padding:0.3rem 0.8rem;">
+    {{ session.status | upper }}
+  </span>
+</div>
+
+{# Actions #}
+<div class="card" style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap;">
+  {% if session.status == "lobby" %}
+    <form method="post" action="/admin/session/{{ session.id }}/start" style="margin:0;">
+      <button type="submit" class="btn btn-success">▶ Start Game</button>
+    </form>
+    <span style="color:var(--text-muted); font-size:0.85rem;">
+      Share the join code with students. Start when everyone has joined.
+    </span>
+  {% elif session.status == "active" %}
+    <form method="post" action="/admin/session/{{ session.id }}/end" style="margin:0;">
+      <button type="submit" class="btn btn-danger"
+              onclick="return confirm('End the game? This cannot be undone.');">
+        ⏹ End Game
+      </button>
+    </form>
+    <span style="color:var(--text-muted); font-size:0.85rem;">
+      Game is live. End it to reveal probabilities and lock scores.
+    </span>
+  {% else %}
+    <span style="color:var(--text-muted);">Game has ended.</span>
+  {% endif %}
+
+  <a href="/admin/session/{{ session.id }}/export" class="btn btn-primary btn-sm" style="margin-left:auto;">
+    📥 Export CSV
+  </a>
+</div>
+
+{# Stats #}
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-value">{{ players | length }}</div>
+    <div class="stat-label">Players</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ session.device_count }}</div>
+    <div class="stat-label">Duck Batches</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ session.max_turns }}</div>
+    <div class="stat-label">Max Turns</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ session.test_budget }}</div>
+    <div class="stat-label">Test Budget</div>
+  </div>
+</div>
+
+<div class="grid-2">
+  {# Leaderboard #}
+  <div class="card">
+    <h3>🏆 Leaderboard</h3>
+    <table>
+      <thead><tr><th>#</th><th>Name</th><th>Score</th><th>Turns</th><th>Budget Used</th></tr></thead>
+      <tbody>
+        {% for entry in leaderboard %}
+        <tr>
+          <td>{{ entry.rank }}</td>
+          <td>{{ entry.name }}</td>
+          <td><strong>{{ entry.score }}</strong></td>
+          <td>{{ entry.turns_used }}/{{ session.max_turns }}</td>
+          <td>{{ entry.budget_used }}/{{ session.test_budget }}</td>
+        </tr>
+        {% endfor %}
+        {% if not leaderboard %}
+        <tr><td colspan="5" style="color:var(--text-muted);">No players yet. Share the join code!</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  {# Reveal probabilities #}
+  <div class="card">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
+      <h3 style="margin:0;">🔑 Batch Defect Rates</h3>
+      <button class="btn btn-sm btn-primary" id="toggle-rates-btn" onclick="toggleRates()">
+        👁 Show
+      </button>
+    </div>
+    <div id="rates-table" style="display:none;">
+      <table>
+        <thead><tr><th>Batch</th><th>True p (defect rate)</th></tr></thead>
+        <tbody>
+          {% for p in device_ps %}
+          <tr>
+            <td>📦 Batch {{ loop.index0 }}</td>
+            <td><strong>{{ "%.4f" | format(p) }}</strong></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p id="rates-hidden-msg" style="color:var(--text-muted); font-size:0.9rem;">
+      🦆 Click <strong>Show</strong> to peek at the true defect rates.
+    </p>
+  </div>
+</div>
+
+<script>
+function toggleRates() {
+  var table = document.getElementById('rates-table');
+  var msg = document.getElementById('rates-hidden-msg');
+  var btn = document.getElementById('toggle-rates-btn');
+  if (table.style.display === 'none') {
+    table.style.display = '';
+    msg.style.display = 'none';
+    btn.textContent = '🙈 Hide';
+  } else {
+    table.style.display = 'none';
+    msg.style.display = '';
+    btn.textContent = '👁 Show';
+  }
+}
+</script>
+
+{# Settings summary #}
+<div class="card">
+  <h3>⚙️ Session Settings</h3>
+  <table>
+    <tr><td style="width:200px; color:var(--text-muted);">Difficulty Seed</td><td>{{ session.seed }}</td></tr>
+    <tr><td style="color:var(--text-muted);">Min/Max n per test</td><td>{{ session.min_n }} – {{ session.max_n }}</td></tr>
+    <tr><td style="color:var(--text-muted);">Premium Scale</td><td>{{ session.premium_scale }}</td></tr>
+    <tr><td style="color:var(--text-muted);">Require Prior Test</td><td>{{ "Yes" if session.require_prior_test else "No" }}</td></tr>
+  </table>
+</div>
+{% endblock %}

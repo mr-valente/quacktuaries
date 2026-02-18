@@ -1,0 +1,10 @@
+services:
+  quacktuaries:
+    build: .
+    container_name: quacktuaries
+    environment:
+      - ADMIN_PASSWORD=local
+      - SESSION_SECRET=local
+    ports:
+      - "8000:8000"
+    restart: unless-stopped

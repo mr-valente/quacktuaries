@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Student Guide — Quacktuaries{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<style>
+  .guide-content h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+  .guide-content h2 {
+    font-size: 1.4rem;
+    margin-top: 2.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .guide-content h3 { font-size: 1.1rem; margin-top: 1.5rem; margin-bottom: 0.75rem; }
+  .guide-content p { margin-bottom: 1rem; color: var(--text); line-height: 1.7; }
+  .guide-content ul, .guide-content ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+  .guide-content li { margin-bottom: 0.4rem; line-height: 1.6; }
+  .guide-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+  }
+  .guide-content th, .guide-content td {
+    padding: 0.6rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .guide-content th {
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .guide-content tr:hover { background: var(--surface2); }
+  .guide-content code {
+    background: var(--surface2);
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+  .guide-content pre {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    overflow-x: auto;
+    margin-bottom: 1.5rem;
+  }
+  .guide-content pre code {
+    background: none;
+    padding: 0;
+  }
+  .guide-content blockquote {
+    border-left: 3px solid var(--primary);
+    padding-left: 1rem;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+  }
+  .guide-content strong { color: var(--text); }
+  .guide-content em { color: var(--text-muted); }
+  .guide-content hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2rem 0;
+  }
+  .guide-content a { color: var(--primary); }
+  .guide-content a:hover { text-decoration: underline; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card guide-content" id="guide">
+  {{ guide_html | safe }}
+</div>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.getElementById('guide'), {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+{% endblock %}

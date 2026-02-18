@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Quacktuaries{% endblock %}
+
+{% block content %}
+<div class="hero">
+  <h1>🦆 Quacktuaries</h1>
+  <p style="color:var(--text-muted); font-size:0.95rem; margin-bottom:0.5rem;">
+    <strong style="color:var(--text);">actuary</strong>
+    — <em>n.</em> A statistician who computes insurance risks and premiums.
+  </p>
+  <p>A proportions-estimation game for learning statistical inference.<br>
+  Inspect batches of rubber ducks, estimate defect rates, and sell insurance policies to maximize your score.</p>
+  <div class="hero-actions">
+    <a href="/join" class="btn btn-primary">Join a Game</a>
+    <a href="/admin" class="btn btn-warning">Teacher Login</a>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3>🎓 Students</h3>
+    <p style="color:var(--text-muted); margin-bottom:1rem;">
+      Get a <strong>join code</strong> from your teacher, enter your name, and start playing.
+      Inspect duck batches to gather data, then sell insurance policies based on your estimates.
+    </p>
+  </div>
+  <div class="card">
+    <h3>👩‍🏫 Teachers</h3>
+    <p style="color:var(--text-muted); margin-bottom:1rem;">
+      Create sessions with custom difficulty, manage games, view the leaderboard,
+      and reveal true defect rates when the game ends.
+    </p>
+  </div>
+</div>
+
+<div class="card">
+  <h3>📖 How It Works</h3>
+  <table>
+    <tr><td style="width:120px;font-weight:600;color:var(--info);">INSPECT</td>
+        <td>Choose a duck batch and sample size <em>n</em>. You pull <em>n</em> ducks from the batch and find <em>x</em> defective ones. Uses 1 turn and <em>n</em> budget.</td></tr>
+    <tr><td style="font-weight:600;color:var(--warning);">SELL POLICY</td>
+        <td>Estimate a confidence interval [L, U] for a batch's true defect rate. Earn a premium based on interval width, but face a penalty if the true rate falls outside your interval.</td></tr>
+    <tr><td style="font-weight:600;color:var(--text-muted);">GOAL</td>
+        <td>Maximize your total score across all batches within the turn and budget limits.</td></tr>
+  </table>
+</div>
+{% endblock %}
