@@ -26,10 +26,22 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+class Teacher(Base):
+    __tablename__ = "teachers"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    name = Column(String, nullable=False)
+    rejoin_token = Column(String(32), nullable=False)  # secret token for reconnecting
+    created_at = Column(DateTime, default=_utcnow)
+
+    sessions = relationship("Session", back_populates="teacher", cascade="all, delete-orphan")
+
+
 class Session(Base):
     __tablename__ = "sessions"
 
     id = Column(String, primary_key=True, default=_uuid)
+    teacher_id = Column(String, ForeignKey("teachers.id"), nullable=False)
     join_code = Column(String(6), unique=True, nullable=False, index=True)
     status = Column(String, nullable=False, default="lobby")  # lobby / active / ended
     seed = Column(Integer, nullable=False)
@@ -48,6 +60,7 @@ class Session(Base):
 
     created_at = Column(DateTime, default=_utcnow)
 
+    teacher = relationship("Teacher", back_populates="sessions")
     players = relationship("Player", back_populates="session", cascade="all, delete-orphan")
     events = relationship("Event", back_populates="session", cascade="all, delete-orphan")
 

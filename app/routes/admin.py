@@ -10,7 +10,6 @@ from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from sqlalchemy.orm import Session as DBSession
 
 from app.config import (
-    ADMIN_PASSWORD,
     DEFAULT_DEVICE_COUNT,
     DEFAULT_MAX_TURNS,
     DEFAULT_TEST_BUDGET,
@@ -22,7 +21,7 @@ from app.config import (
     DEFAULT_REQUIRE_PRIOR_TEST,
 )
 from app.database import get_db
-from app.models import Session, Player, Event
+from app.models import Session, Player, Event, Teacher
 from app.game import (
     generate_device_ps,
     generate_join_code,
@@ -34,38 +33,68 @@ from app.templating import templates
 router = APIRouter(prefix="/admin")
 
 
-def _require_admin(request: Request):
-    """Check admin session; redirect to login if missing."""
-    if not request.session.get("is_admin"):
-        return False
-    return True
+def _get_teacher(request: Request, db: DBSession):
+    """Return the current Teacher from the session cookie, or None."""
+    teacher_id = request.session.get("teacher_id")
+    if not teacher_id:
+        return None
+    return db.query(Teacher).filter_by(id=teacher_id).first()
+
+
+def _require_own_session(teacher: Teacher, session: Session) -> bool:
+    """Check that the teacher owns the given session."""
+    return teacher is not None and session is not None and session.teacher_id == teacher.id
 
 
 # ── Login ──────────────────────────────────────────────────────────────────────
 
 @router.get("", response_class=HTMLResponse)
 @router.get("/", response_class=HTMLResponse)
-def admin_login_page(request: Request):
-    if _require_admin(request):
+def admin_login_page(request: Request, db: DBSession = Depends(get_db)):
+    teacher = _get_teacher(request, db)
+    if teacher:
         return RedirectResponse(url="/admin/dashboard", status_code=303)
     return templates.TemplateResponse("admin_login.html", {"request": request, "error": None})
 
 
 @router.post("/login")
-def admin_login(request: Request, password: str = Form(...)):
-    if password == ADMIN_PASSWORD:
-        request.session["is_admin"] = True
+def admin_login(request: Request, teacher_name: str = Form(...), db: DBSession = Depends(get_db)):
+    teacher_name = teacher_name.strip()
+    if not teacher_name:
+        return templates.TemplateResponse(
+            "admin_login.html",
+            {"request": request, "error": "Please enter your name."},
+            status_code=400,
+        )
+
+    # Check if a teacher with this name already exists
+    existing = db.query(Teacher).filter_by(name=teacher_name).first()
+    if existing:
+        # Re-login: verify the rejoin token from the cookie
+        cookie_token = request.session.get("teacher_rejoin_token")
+        if cookie_token != existing.rejoin_token:
+            return templates.TemplateResponse(
+                "admin_login.html",
+                {"request": request, "error": "That teacher name is already taken."},
+                status_code=400,
+            )
+        request.session["teacher_id"] = existing.id
         return RedirectResponse(url="/admin/dashboard", status_code=303)
-    return templates.TemplateResponse(
-        "admin_login.html",
-        {"request": request, "error": "Incorrect password."},
-        status_code=401,
-    )
+
+    rejoin_token = secrets.token_hex(16)
+    teacher = Teacher(name=teacher_name, rejoin_token=rejoin_token)
+    db.add(teacher)
+    db.commit()
+    db.refresh(teacher)
+
+    request.session["teacher_id"] = teacher.id
+    request.session["teacher_rejoin_token"] = rejoin_token
+    return RedirectResponse(url="/admin/dashboard", status_code=303)
 
 
 @router.get("/logout")
 def admin_logout(request: Request):
-    request.session.pop("is_admin", None)
+    request.session.pop("teacher_id", None)
     return RedirectResponse(url="/", status_code=303)
 
 
@@ -73,20 +102,28 @@ def admin_logout(request: Request):
 
 @router.get("/dashboard", response_class=HTMLResponse)
 def admin_dashboard(request: Request, db: DBSession = Depends(get_db)):
-    if not _require_admin(request):
+    teacher = _get_teacher(request, db)
+    if not teacher:
         return RedirectResponse(url="/admin", status_code=303)
-    sessions = db.query(Session).order_by(Session.created_at.desc()).all()
+    sessions = (
+        db.query(Session)
+        .filter_by(teacher_id=teacher.id)
+        .order_by(Session.created_at.desc())
+        .all()
+    )
     return templates.TemplateResponse("admin_dashboard.html", {
         "request": request,
         "sessions": sessions,
+        "teacher": teacher,
     })
 
 
 # ── Create session ─────────────────────────────────────────────────────────────
 
 @router.get("/sessions/new", response_class=HTMLResponse)
-def new_session_form(request: Request):
-    if not _require_admin(request):
+def new_session_form(request: Request, db: DBSession = Depends(get_db)):
+    teacher = _get_teacher(request, db)
+    if not teacher:
         return RedirectResponse(url="/admin", status_code=303)
     return templates.TemplateResponse("admin_new_session.html", {
         "request": request,
@@ -99,6 +136,7 @@ def new_session_form(request: Request):
             "max_n": DEFAULT_MAX_N,
             "premium_scale": DEFAULT_PREMIUM_SCALE,
         },
+        "teacher": teacher,
     })
 
 
@@ -114,7 +152,8 @@ def create_session(
     premium_scale: int = Form(DEFAULT_PREMIUM_SCALE),
     db: DBSession = Depends(get_db),
 ):
-    if not _require_admin(request):
+    teacher = _get_teacher(request, db)
+    if not teacher:
         return RedirectResponse(url="/admin", status_code=303)
 
     seed = secrets.randbelow(2**31)
@@ -127,6 +166,7 @@ def create_session(
     ps = generate_device_ps(device_count, seed, difficulty)
 
     session = Session(
+        teacher_id=teacher.id,
         join_code=join_code,
         seed=seed,
         device_ps_json=json.dumps(ps),
@@ -151,11 +191,12 @@ def create_session(
 
 @router.get("/s/{session_id}", response_class=HTMLResponse)
 def admin_session_dashboard(session_id: str, request: Request, db: DBSession = Depends(get_db)):
-    if not _require_admin(request):
+    teacher = _get_teacher(request, db)
+    if not teacher:
         return RedirectResponse(url="/admin", status_code=303)
 
     session = db.query(Session).filter_by(id=session_id).first()
-    if not session:
+    if not session or not _require_own_session(teacher, session):
         return RedirectResponse(url="/admin/dashboard", status_code=303)
 
     leaderboard = get_leaderboard(db, session.id)
@@ -168,6 +209,7 @@ def admin_session_dashboard(session_id: str, request: Request, db: DBSession = D
         "leaderboard": leaderboard,
         "players": players,
         "device_ps": device_ps,
+        "teacher": teacher,
     })
 
 
@@ -175,10 +217,11 @@ def admin_session_dashboard(session_id: str, request: Request, db: DBSession = D
 
 @router.post("/session/{session_id}/start")
 def start_session(session_id: str, request: Request, db: DBSession = Depends(get_db)):
-    if not _require_admin(request):
+    teacher = _get_teacher(request, db)
+    if not teacher:
         return RedirectResponse(url="/admin", status_code=303)
     session = db.query(Session).filter_by(id=session_id).first()
-    if session and session.status == "lobby":
+    if session and _require_own_session(teacher, session) and session.status == "lobby":
         session.status = "active"
         event = Event(session_id=session.id, type="SYSTEM", payload_json=json.dumps({"message": "Session started"}))
         db.add(event)
@@ -188,10 +231,11 @@ def start_session(session_id: str, request: Request, db: DBSession = Depends(get
 
 @router.post("/session/{session_id}/end")
 def end_session(session_id: str, request: Request, db: DBSession = Depends(get_db)):
-    if not _require_admin(request):
+    teacher = _get_teacher(request, db)
+    if not teacher:
         return RedirectResponse(url="/admin", status_code=303)
     session = db.query(Session).filter_by(id=session_id).first()
-    if session and session.status == "active":
+    if session and _require_own_session(teacher, session) and session.status == "active":
         session.status = "ended"
         event = Event(session_id=session.id, type="SYSTEM", payload_json=json.dumps({"message": "Session ended"}))
         db.add(event)
@@ -203,10 +247,11 @@ def end_session(session_id: str, request: Request, db: DBSession = Depends(get_d
 
 @router.get("/session/{session_id}/reveal")
 def reveal_ps(session_id: str, request: Request, db: DBSession = Depends(get_db)):
-    if not _require_admin(request):
+    teacher = _get_teacher(request, db)
+    if not teacher:
         return {"error": "Unauthorized"}
     session = db.query(Session).filter_by(id=session_id).first()
-    if not session:
+    if not session or not _require_own_session(teacher, session):
         return {"error": "Not found"}
     if session.status != "ended":
         return {"error": "Session must be ended to reveal probabilities."}
@@ -220,8 +265,12 @@ def reveal_ps(session_id: str, request: Request, db: DBSession = Depends(get_db)
 
 @router.get("/session/{session_id}/export")
 def export_events_csv(session_id: str, request: Request, db: DBSession = Depends(get_db)):
-    if not _require_admin(request):
+    teacher = _get_teacher(request, db)
+    if not teacher:
         return RedirectResponse(url="/admin", status_code=303)
+    session_obj = db.query(Session).filter_by(id=session_id).first()
+    if not session_obj or not _require_own_session(teacher, session_obj):
+        return RedirectResponse(url="/admin/dashboard", status_code=303)
 
     events = (
         db.query(Event)

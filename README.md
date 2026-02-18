@@ -10,8 +10,7 @@ Built with **Python/FastAPI**, **Jinja2** server-rendered templates, and **SQLit
 # 1. Clone and enter the project
 cd quacktuaries
 
-# 2. Set your passwords in docker-compose.yml (or use env vars)
-#    Edit ADMIN_PASSWORD and SESSION_SECRET
+# 2. Set SESSION_SECRET in docker-compose.yml (or use env vars)
 
 # 3. Build and run
 docker compose up -d --build
@@ -31,7 +30,6 @@ source .venv/bin/activate
 pip install -r requirements.txt
 
 # 3. Set environment variables
-export ADMIN_PASSWORD="your-password"
 export SESSION_SECRET="your-secret"
 export DB_PATH="./dev.db"
 
@@ -44,7 +42,7 @@ uvicorn app.main:app --reload --port 8000
 ## How to Play
 
 ### Teacher Setup
-1. Go to `/admin` and log in with the admin password
+1. Go to `/admin` and enter your name to start a teacher session
 2. Create a new session — choose a difficulty preset (Easy / Medium / Hard) which configures batch count, turn limits, and inspection budget
 3. Share the **join code** (e.g., `AB12CD`) with students
 4. Click **Start Game** when everyone has joined
@@ -89,7 +87,6 @@ All settings are controlled via environment variables:
 
 | Variable         | Default       | Description                          |
 |-----------------|---------------|--------------------------------------|
-| `ADMIN_PASSWORD` | `change-me`   | Password for teacher login           |
 | `SESSION_SECRET` | (random)      | Secret key for signed cookies        |
 | `DB_PATH`        | `/data/app.db` | Path to SQLite database file         |
 | `PORT`           | `8000`        | Server port                          |
@@ -108,7 +105,6 @@ services:
     build: .
     container_name: quacktuaries
     environment:
-      - ADMIN_PASSWORD=change-me
       - SESSION_SECRET=change-me-too
     volumes:
       - quack_data:/data

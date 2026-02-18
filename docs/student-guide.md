@@ -2,9 +2,8 @@
 
 ## What Is This Game?
 
-Quacktuaries is a game about **statistical inference**. You play the role of an insurance underwriter at a rubber duck factory 🏭. The factory produces batches of rubber ducks, and each batch has a hidden true defect rate, *p*, that you don't know. Your job is to **inspect** batches by sampling ducks, **estimate** their defect rates, and then **sell insurance policies** (confidence intervals) for profit.
+Quacktuaries is a game about **statistical inference**. You play the role of an insurance underwriter at a rubber duck factory. The factory produces batches of rubber ducks, and each batch has a hidden true defect rate, *p*, that you don't know. Your job is to **inspect** batches by sampling ducks, **estimate** their defect rates, and then **sell insurance policies** (confidence intervals) for profit.
 
----
 
 ## Getting Started
 
@@ -15,11 +14,10 @@ Quacktuaries is a game about **statistical inference**. You play the role of an 
 
 If you get disconnected, just rejoin with the **same name and code** to resume where you left off.
 
----
 
 ## Gameplay
 
-### 📦 Batches
+### Batches 📦
 
 The game presents you with a set of numbered duck batches (by default, 10). Each batch has a hidden defect rate *p* that determines how many ducks in the batch are defective. Your goal is to figure out what *p* is for each batch, or at least narrow it down to a range.
 
@@ -45,7 +43,6 @@ When inspecting a batch, you choose a sample size *n* (number of ducks to pull f
 
 Larger samples give you more data but consume more of your budget.
 
----
 
 ## Actions
 
@@ -59,7 +56,7 @@ You can inspect the same batch multiple times. Your results accumulate so you ca
 
 The sample proportion $\hat{p} = x/n$ is your best point estimate of the defect rate. As you inspect more ducks, your cumulative $\hat{p}$ gets closer to the true value.
 
-### 2. 💰 Sell a Policy
+### 2. Sell a Policy 💰
 
 Once you've inspected a batch and have a feel for its defect rate *p*, you can sell an insurance policy on it. To sell, you provide:
 
@@ -69,9 +66,8 @@ Once you've inspected a batch and have a feel for its defect rate *p*, you can s
 
 If the batch's true defect rate *p* falls inside your interval [L, U], the policy is a **HIT** ✅ and you earn a premium. If *p* falls outside, it's a **MISS** ❌ and you pay a penalty. You must inspect a batch at least once before selling a policy on it (by default).
 
----
 
-## Scoring
+## Scoring 
 
 Your score starts at **0** and changes each time you sell a policy. Inspecting does not directly affect your score.
 
@@ -132,7 +128,6 @@ $$\text{Net} = \text{Premium} - \text{Penalty}$$
 - The true defect rate is 0.55 — outside your interval. **MISS.** ❌
 - Net = 86 − 350 = **−264 points**
 
----
 
 ## Strategy Tips
 
@@ -173,7 +168,7 @@ Narrow intervals pay more but fail more easily. Consider this comparison at 95% 
 
 The narrower the interval, the lower the hit rate you need to break even, but the harder it is to actually hit consistently. Find the sweet spot where your data supports the width you choose.
 
----
+
 
 ## Quick Reference
 
@@ -193,7 +188,6 @@ The narrower the interval, the lower the hit rate you need to break even, but th
 | 95%        | 10  | 350          |
 | 99%        | 25  | 600          |
 
----
 
 ## FAQ
 

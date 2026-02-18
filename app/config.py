@@ -4,7 +4,6 @@ import os
 import secrets
 
 
-ADMIN_PASSWORD: str = os.environ.get("ADMIN_PASSWORD", "change-me")
 SESSION_SECRET: str = os.environ.get("SESSION_SECRET", secrets.token_hex(32))
 DATABASE_URL: str = os.environ.get("DATABASE_URL", "sqlite:////data/app.db")
 BASE_URL: str = os.environ.get("BASE_URL", "http://localhost:8000")

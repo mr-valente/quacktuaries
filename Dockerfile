@@ -14,7 +14,6 @@ COPY docs/ ./docs/
 RUN mkdir -p /data
 
 # Environment defaults
-ENV ADMIN_PASSWORD=change-me
 ENV SESSION_SECRET=change-me-too
 ENV DB_PATH=/data/app.db
 ENV PORT=8000
