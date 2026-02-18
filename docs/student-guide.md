@@ -73,43 +73,43 @@ Your score starts at **0** and changes each time you sell a policy. Inspecting d
 
 ### Premium (What You Earn)
 
-When you sell a policy, you earn a premium based on how **narrow** your interval is. A narrower interval means you're making a bolder claim, so you earn more:
+When you sell a policy, you earn a premium based on how **narrow** your interval is and how **confident** you claim to be. A narrower interval means you're making a bolder claim, and higher confidence means the policy is worth more to the buyer — so you earn more for both:
 
-$$\text{Premium} = \left\lfloor \text{premium\_scale} \times (1 - w) \right\rfloor - \text{confidence\_fee}$$
+$$\text{Premium} = \left\lfloor \text{premium\_scale} \times (1 - w) \times \text{confidence\_bonus} \right\rfloor$$
 
 where $w = U - L$ is the **width** of your interval.
 
 With the default `premium_scale` of **120**:
 
-| Interval Width (*w*) | Confidence | Fee | Raw Premium | **Net Premium** |
-|----------------------|------------|-----|-------------|-----------------|
-| 0.10                 | 90%        | 0   | 108         | **108**         |
-| 0.10                 | 95%        | 10  | 108         | **98**          |
-| 0.10                 | 99%        | 25  | 108         | **83**          |
-| 0.20                 | 90%        | 0   | 96          | **96**          |
-| 0.20                 | 95%        | 10  | 96          | **86**          |
-| 0.20                 | 99%        | 25  | 96          | **71**          |
-| 0.30                 | 90%        | 0   | 84          | **84**          |
-| 0.30                 | 95%        | 10  | 84          | **74**          |
-| 0.30                 | 99%        | 25  | 84          | **59**          |
-| 0.50                 | 90%        | 0   | 60          | **60**          |
-| 0.50                 | 95%        | 10  | 60          | **50**          |
-| 0.50                 | 99%        | 25  | 60          | **35**          |
-| 0.80                 | 90%        | 0   | 24          | **24**          |
-| 0.80                 | 95%        | 10  | 24          | **14**          |
-| 0.80                 | 99%        | 25  | 24          | **0**           |
+| Interval Width (*w*) | Confidence | Bonus | **Premium** |
+|----------------------|------------|-------|-------------|
+| 0.10                 | 90%        | 1.0×  | **108**     |
+| 0.10                 | 95%        | 1.2×  | **129**     |
+| 0.10                 | 99%        | 1.5×  | **162**     |
+| 0.20                 | 90%        | 1.0×  | **96**      |
+| 0.20                 | 95%        | 1.2×  | **115**     |
+| 0.20                 | 99%        | 1.5×  | **144**     |
+| 0.30                 | 90%        | 1.0×  | **84**      |
+| 0.30                 | 95%        | 1.2×  | **100**     |
+| 0.30                 | 99%        | 1.5×  | **126**     |
+| 0.50                 | 90%        | 1.0×  | **60**      |
+| 0.50                 | 95%        | 1.2×  | **72**      |
+| 0.50                 | 99%        | 1.5×  | **90**      |
+| 0.80                 | 90%        | 1.0×  | **24**      |
+| 0.80                 | 95%        | 1.2×  | **28**      |
+| 0.80                 | 99%        | 1.5×  | **36**      |
 
 ### Penalty (What You Lose on a Miss)
 
 If the true *p* is **not** inside your interval [L, U], you pay a penalty that depends on the confidence level you chose:
 
-| Confidence Level | Confidence Fee | Miss Penalty |
-|------------------|----------------|--------------|
-| 90%              | 0              | 200          |
-| 95%              | 10             | 350          |
-| 99%              | 25             | 600          |
+| Confidence Level | Bonus | Miss Penalty |
+|------------------|-------|--------------|
+| 90%              | 1.0×  | 150          |
+| 95%              | 1.2×  | 300          |
+| 99%              | 1.5×  | 500          |
 
-Higher confidence levels have steeper penalties (and a small fee that reduces your premium) but they signal that you're very sure about your interval. If you claim 99% confidence and miss, you lose **600 points**.
+Higher confidence levels earn bigger premiums but carry steeper penalties if you miss. Think of it like real insurance: a 99% coverage guarantee is worth more to the buyer, but if you can't deliver, the fallout is severe. If you claim 99% confidence and miss, you lose **500 points**.
 
 ### Net Score per Policy
 
