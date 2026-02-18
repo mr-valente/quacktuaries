@@ -54,7 +54,7 @@ class Session(Base):
     min_n = Column(Integer, nullable=False, default=5)
     max_n = Column(Integer, nullable=False, default=60)
     premium_scale = Column(Integer, nullable=False, default=120)
-    confidence_fee_json = Column(Text, nullable=False)
+    confidence_bonus_json = Column(Text, nullable=False)
     miss_penalty_json = Column(Text, nullable=False)
     require_prior_test = Column(Boolean, nullable=False, default=True)
 

@@ -71,15 +71,15 @@ A full **Student Guide** is available in-app at `/guide`.
 | Max Sample Size | 100 | 80 | 60 |
 
 ### Scoring
-- **Premium** = `floor(premium_scale × (1 - width)) - confidence_fee`
+- **Premium** = `floor(premium_scale × (1 - width) × confidence_bonus)`
 - **Penalty** (if *p* not in [L, U]) = `miss_penalty[confidence]`
 - **Net** = premium - penalty
 
-| Confidence | Fee | Miss Penalty |
-|-----------|-----|-------------|
-| 0.90      | 0   | 200         |
-| 0.95      | 10  | 350         |
-| 0.99      | 25  | 600         |
+| Confidence | Bonus | Miss Penalty |
+|-----------|-------|-------------|
+| 0.90      | 1.0×  | 150         |
+| 0.95      | 1.2×  | 300         |
+| 0.99      | 1.5×  | 500         |
 
 ## Configuration
 

@@ -119,14 +119,14 @@ $$\text{Net} = \text{Premium} - \text{Penalty}$$
 - On a **MISS**: Net = Premium − Penalty (usually very negative)
 
 **Example — HIT:** You sell a policy on Batch 3 with interval [0.30, 0.50] at 95% confidence.
-- Width = 0.20, Premium = floor(120 × 0.80) − 10 = 96 − 10 = **86**
+- Width = 0.20, Premium = floor(120 × 0.80 × 1.2) = **115**
 - The true defect rate is 0.42 — it's inside your interval. **HIT!** ✅
-- Net = 86 − 0 = **+86 points**
+- Net = 115 − 0 = **+115 points**
 
 **Example — MISS:** Same interval [0.30, 0.50] at 95% confidence.
-- Premium = **86** (same as above)
+- Premium = **115** (same as above)
 - The true defect rate is 0.55 — outside your interval. **MISS.** ❌
-- Net = 86 − 350 = **−264 points**
+- Net = 115 − 300 = **−185 points**
 
 
 ## Strategy Tips
@@ -137,9 +137,9 @@ If you spend too many turns inspecting, you won't have turns left to sell polici
 
 ### Match Confidence to Data Quality
 
-- If you have a lot of data on a batch, you can afford narrow intervals at high confidence.
+- If you have a lot of data on a batch, you can afford narrow intervals at high confidence — and you'll earn a bigger premium for doing so.
 - If you're less sure, use a wider interval or a lower confidence level to reduce penalty risk.
-- The 90% confidence level has **no fee** and the lowest penalty (200), making it the safest option for uncertain estimates.
+- Higher confidence pays more but punishes misses severely. Only claim 99% when your data truly supports it.
 
 ### Watch Your Budget
 
@@ -155,18 +155,17 @@ You don't need to inspect every batch. Focus on gathering enough data to sell co
 
 ### Think About Risk vs. Reward
 
-Narrow intervals pay more but fail more easily. Consider this comparison at 95% confidence:
+Higher confidence earns more per hit but costs more per miss. Consider this comparison at width 0.20:
 
-| Width | Premium | Penalty on Miss | Break-Even Accuracy |
-|-------|---------|-----------------|---------------------|
-| 0.10  | 98      | 350             | 78%                 |
-| 0.20  | 86      | 350             | 80%                 |
-| 0.30  | 74      | 350             | 83%                 |
-| 0.50  | 50      | 350             | 88%                 |
+| Confidence | Premium | Penalty on Miss | Break-Even Accuracy |
+|------------|---------|-----------------|---------------------|
+| 90%        | 96      | 150             | 61%                 |
+| 95%        | 115     | 300             | 72%                 |
+| 99%        | 144     | 500             | 78%                 |
 
 *Break-even accuracy = the hit rate you need for the strategy to have non-negative expected value.*
 
-The narrower the interval, the lower the hit rate you need to break even, but the harder it is to actually hit consistently. Find the sweet spot where your data supports the width you choose.
+The higher the confidence, the more you earn when right, but you need to hit more consistently to break even. If your data supports a 99% CI, the payoff is significantly higher than playing it safe at 90%.
 
 
 
@@ -182,11 +181,11 @@ The narrower the interval, the lower the hit rate you need to break even, but th
 | Premium scale     | 120           |
 | Prior test needed | Yes           |
 
-| Confidence | Fee | Miss Penalty |
-|------------|-----|--------------|
-| 90%        | 0   | 200          |
-| 95%        | 10  | 350          |
-| 99%        | 25  | 600          |
+| Confidence | Bonus | Miss Penalty |
+|------------|-------|--------------|
+| 90%        | 1.0×  | 150          |
+| 95%        | 1.2×  | 300          |
+| 99%        | 1.5×  | 500          |
 
 
 ## FAQ
@@ -195,7 +194,7 @@ The narrower the interval, the lower the hit rate you need to break even, but th
 A: No. You can only sell one policy per batch. Choose your interval carefully! You can still inspect the same batch multiple times before selling.
 
 **Q: What happens if my interval is [0.00, 1.00]?**
-A: It will always hit, but your premium is floor(120 × 0) − fee = 0 (or negative). You'd earn nothing or lose points.
+A: It will always hit, but your premium is floor(120 × 0 × bonus) = 0. You'd earn nothing.
 
 **Q: Can I go negative?**
 A: Yes. Missed policies result in large deductions. A bad miss can wipe out several good sells.

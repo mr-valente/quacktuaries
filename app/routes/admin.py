@@ -16,7 +16,7 @@ from app.config import (
     DEFAULT_MIN_N,
     DEFAULT_MAX_N,
     DEFAULT_PREMIUM_SCALE,
-    DEFAULT_CONFIDENCE_FEE,
+    DEFAULT_CONFIDENCE_BONUS,
     DEFAULT_MISS_PENALTY,
     DEFAULT_REQUIRE_PRIOR_TEST,
 )
@@ -176,7 +176,7 @@ def create_session(
         min_n=min_n,
         max_n=max_n,
         premium_scale=premium_scale,
-        confidence_fee_json=json.dumps(DEFAULT_CONFIDENCE_FEE),
+        confidence_bonus_json=json.dumps(DEFAULT_CONFIDENCE_BONUS),
         miss_penalty_json=json.dumps(DEFAULT_MISS_PENALTY),
         require_prior_test=DEFAULT_REQUIRE_PRIOR_TEST,
     )

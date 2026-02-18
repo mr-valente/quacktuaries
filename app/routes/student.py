@@ -41,7 +41,7 @@ def student_dashboard(session_id: str, request: Request, db: DBSession = Depends
     devices = get_player_devices(db, player.id, session.device_count)
     events = get_player_events(db, player.id, limit=20)
     leaderboard = get_leaderboard(db, session.id)
-    conf_fee = json.loads(session.confidence_fee_json)
+    conf_bonus = json.loads(session.confidence_bonus_json)
 
     return templates.TemplateResponse("student_dashboard.html", {
         "request": request,
@@ -50,7 +50,7 @@ def student_dashboard(session_id: str, request: Request, db: DBSession = Depends
         "devices": devices,
         "events": events,
         "leaderboard": leaderboard,
-        "confidence_levels": list(conf_fee.keys()),
+        "confidence_levels": list(conf_bonus.keys()),
         "error": request.query_params.get("error"),
         "success": request.query_params.get("success"),
     })

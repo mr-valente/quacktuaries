@@ -178,8 +178,8 @@ def execute_sell(
         raise GameError("No turns remaining.")
 
     conf_key = confidence
-    if conf_key not in settings["confidence_fee"]:
-        raise GameError(f"Invalid confidence level: {confidence}. Choose from {list(settings['confidence_fee'].keys())}.")
+    if conf_key not in settings["confidence_bonus"]:
+        raise GameError(f"Invalid confidence level: {confidence}. Choose from {list(settings['confidence_bonus'].keys())}.")
 
     if not (0.0 <= L < U <= 1.0):
         raise GameError("Require 0 <= L < U <= 1.")
@@ -196,7 +196,7 @@ def execute_sell(
 
     p_i = ps[device_id]
     w = U - L
-    premium = max(0, math.floor(settings["premium_scale"] * (1 - w)) - settings["confidence_fee"][conf_key])
+    premium = max(0, math.floor(settings["premium_scale"] * (1 - w) * settings["confidence_bonus"][conf_key]))
     hit = L <= p_i <= U
     penalty = 0 if hit else settings["miss_penalty"][conf_key]
     delta = premium - penalty
@@ -266,7 +266,7 @@ def _session_settings(session: Session) -> dict:
         "min_n": session.min_n,
         "max_n": session.max_n,
         "premium_scale": session.premium_scale,
-        "confidence_fee": json.loads(session.confidence_fee_json),
+        "confidence_bonus": json.loads(session.confidence_bonus_json),
         "miss_penalty": json.loads(session.miss_penalty_json),
         "require_prior_test": session.require_prior_test,
     }
