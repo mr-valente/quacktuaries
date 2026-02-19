@@ -2,7 +2,7 @@
 
 ## What Is This Game?
 
-Quacktuaries is a game about **statistical inference**. You play the role of an insurance underwriter at a rubber duck factory. The factory produces batches of rubber ducks, and each batch has a hidden true defect rate, *p*, that you don't know. Your job is to **inspect** batches by sampling ducks, **estimate** their defect rates, and then **sell insurance policies** (confidence intervals) for profit.
+Quacktuaries is a game about **statistical inference**. You play the role of an insurance underwriter at a rubber duck factory. The factory produces batches of rubber ducks, and each batch has a hidden true defect rate, *p*, that you don't know. Your job is to **inspect** batches by sampling ducks, **estimate** their defect rates, and then **sell insurance policies** *(confidence intervals)* for profit.
 
 
 ## Getting Started
@@ -23,32 +23,20 @@ The game presents you with a set of numbered duck batches (by default, 10). Each
 
 ### Turns and Budget
 
-You have a limited number of **turns** and a limited **inspection budget**:
-
-| Resource          | Default |
-|-------------------|--------:|
-| Turns             | 20      |
-| Inspection budget | 400     |
+You have a limited number of **turns** (default: **20**) and a limited **inspection budget** (default: **400**).
 
 Every action (inspecting or selling) costs **1 turn**. Inspecting also costs *n* points from your budget, where *n* is the number of ducks you sample. Selling a policy does not cost any budget, but it does cost 1 turn. Plan carefully: once you run out of either, you're done.
 
 ### Sample Size Limits
 
-When inspecting a batch, you choose a sample size *n* (number of ducks to pull from the batch). It must fall within the allowed range:
-
-| Limit   | Default |
-|---------|--------:|
-| Minimum | 5       |
-| Maximum | 80      |
-
-Larger samples give you more data but consume more of your budget.
+When inspecting a batch, you choose a sample size *n* (number of ducks to pull from the batch). It must fall within the allowed range of **5** to **80** (by default). Larger samples give you more data but consume more of your budget.
 
 
 ## Actions
 
 Each turn you choose **one** of two actions:
 
-### 1. Inspect a Batch 🔍 
+### 1. Inspect a Batch 🔍
 
 Pick a batch and a sample size *n*. The game pulls *n* ducks from the batch and tells you how many defective ducks *x* you found out of *n*.
 
@@ -67,7 +55,7 @@ Once you've inspected a batch and have a feel for its defect rate *p*, you can s
 If the batch's true defect rate *p* falls inside your interval [L, U], the policy is a **HIT** ✅ and you earn a premium. If *p* falls outside, it's a **MISS** ❌ and you pay a penalty. You must inspect a batch at least once before selling a policy on it (by default).
 
 
-## Scoring 
+## Scoring
 
 Your score starts at **0** and changes each time you sell a policy. Inspecting does not directly affect your score.
 
@@ -133,40 +121,14 @@ $$\text{Net} = \text{Premium} - \text{Penalty}$$
 
 ### Balance Inspecting and Selling
 
-If you spend too many turns inspecting, you won't have turns left to sell policies (where you actually score). If you sell too early without enough data, you'll likely miss and take big penalties.
+If you spend too many turns inspecting, you won't have turns left to sell policies (where you actually score). If you sell too early without enough data, you'll likely miss and take big penalties. You don't need to inspect every batch, and you can inspect the same batch more than once, so focus on gathering enough data to sell confidently on the batches you do inspect. 
 
-### Match Confidence to Data Quality
+### Match Confidence to Risk
 
-- If you have a lot of data on a batch, you can afford narrow intervals at high confidence — and you'll earn a bigger premium for doing so.
+- If you have a lot of data on a batch, you can afford narrow intervals at high confidence, and you'll earn a bigger premium for doing so.
 - If you're less sure, use a wider interval or a lower confidence level to reduce penalty risk.
-- Higher confidence pays more but punishes misses severely. Only claim 99% when your data truly supports it.
-
-### Watch Your Budget
-
-Each inspection costs *n* from your budget of 400. Example allocation:
-
-| Strategy                       | Inspections | Budget Used | Turns for Selling |
-|--------------------------------|-------------|-------------|-------------------|
-| Inspect 8 batches × n=50      | 8           | 400         | 12 turns          |
-| Inspect 10 batches × n=35     | 10          | 350         | 10 turns          |
-| Inspect 6 batches × n=50      | 6           | 300         | 14 turns          |
-
-You don't need to inspect every batch. Focus on gathering enough data to sell confidently on the batches you do inspect.
-
-### Think About Risk vs. Reward
-
-Higher confidence earns more per hit but costs more per miss. Consider this comparison at width 0.20:
-
-| Confidence | Premium | Penalty on Miss | Break-Even Accuracy |
-|------------|---------|-----------------|---------------------|
-| 90%        | 76      | 150             | 66%                 |
-| 95%        | 92      | 350             | 79%                 |
-| 99%        | 115     | 600             | 84%                 |
-
-*Break-even accuracy = the hit rate you need for the strategy to have non-negative expected value.*
-
-The higher the confidence, the more you earn when right, but you need to hit more consistently to break even. If your data supports a 99% CI, the payoff is significantly higher than playing it safe at 90%. But width matters even more — narrowing your interval gives you *quadratically* increasing returns.
-
+- Higher confidence pays more per hit but punishes misses severely — only claim 99% when your data truly supports it. If it does, the payoff is significantly higher than playing it safe at 90%.
+- Width matters even more than confidence — narrowing your interval gives you *quadratically* increasing returns.
 
 
 ## Quick Reference
@@ -197,7 +159,7 @@ A: No. You can only sell one policy per batch. Choose your interval carefully! Y
 A: It will always hit, but your premium is floor(120 × 0² × bonus) = 0. You'd earn nothing.
 
 **Q: Can I go negative?**
-A: Yes. Missed policies result in large deductions. A bad miss can wipe out several good sells.
+A: Yes. Missed policies result in large deductions. A bad miss can wipe out several good sales.
 
 **Q: When are the true defect rates revealed?**
 A: After the instructor ends the game. Until then, you only see your inspection results.
