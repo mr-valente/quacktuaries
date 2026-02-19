@@ -111,7 +111,8 @@ quacktuaries/
 │   ├── templates/         # Jinja2 HTML templates
 │   └── static/            # Static assets
 ├── docs/
-│   └── student-guide.md   # Full student guide (rendered at /guide)
+│   ├── scoring-analysis.md # Statistical analysis of the scoring formula
+│   └── student-guide.md    # Full student guide (rendered at /guide)
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
