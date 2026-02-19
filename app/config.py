@@ -17,5 +17,5 @@ DEFAULT_MIN_N: int = 5
 DEFAULT_MAX_N: int = 80
 DEFAULT_PREMIUM_SCALE: int = 120
 DEFAULT_CONFIDENCE_BONUS: dict[str, float] = {"0.90": 1.0, "0.95": 1.2, "0.99": 1.5}
-DEFAULT_MISS_PENALTY: dict[str, int] = {"0.90": 150, "0.95": 300, "0.99": 500}
+DEFAULT_MISS_PENALTY: dict[str, int] = {"0.90": 150, "0.95": 350, "0.99": 600}
 DEFAULT_REQUIRE_PRIOR_TEST: bool = True

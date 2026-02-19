@@ -71,15 +71,15 @@ A full **Student Guide** is available in-app at `/guide`.
 | Max Sample Size | 100 | 80 | 60 |
 
 ### Scoring
-- **Premium** = `floor(premium_scale × (1 - width) × confidence_bonus)`
+- **Premium** = `floor(premium_scale × (1 - width)² × confidence_bonus)`
 - **Penalty** (if *p* not in [L, U]) = `miss_penalty[confidence]`
 - **Net** = premium - penalty
 
 | Confidence | Bonus | Miss Penalty |
 |-----------|-------|-------------|
 | 0.90      | 1.0×  | 150         |
-| 0.95      | 1.2×  | 300         |
-| 0.99      | 1.5×  | 500         |
+| 0.95      | 1.2×  | 350         |
+| 0.99      | 1.5×  | 600         |
 
 ## Configuration
 
@@ -91,48 +91,6 @@ All settings are controlled via environment variables:
 | `DB_PATH`        | `/data/app.db` | Path to SQLite database file         |
 | `PORT`           | `8000`        | Server port                          |
 | `BASE_URL`       | `http://localhost:8000` | Base URL for generated links |
-
-## Exposing Publicly
-
-### Option A: Caddy Reverse Proxy (recommended for home server)
-
-1. Edit the included `Caddyfile` — replace `yourdomain.com` with your domain
-2. Add Caddy to your `docker-compose.yml`:
-
-```yaml
-services:
-  quacktuaries:
-    build: .
-    container_name: quacktuaries
-    environment:
-      - SESSION_SECRET=change-me-too
-    volumes:
-      - quack_data:/data
-    expose:
-      - "8000"
-    restart: unless-stopped
-
-  caddy:
-    image: caddy:2
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - caddy_data:/data
-    restart: unless-stopped
-
-volumes:
-  quack_data:
-  caddy_data:
-```
-
-### Option B: Cloudflare Tunnel
-
-```bash
-# Install cloudflared, then:
-cloudflared tunnel --url http://localhost:8000
-```
 
 ## Project Structure
 

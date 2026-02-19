@@ -196,7 +196,7 @@ def execute_sell(
 
     p_i = ps[device_id]
     w = U - L
-    premium = max(0, math.floor(settings["premium_scale"] * (1 - w) * settings["confidence_bonus"][conf_key]))
+    premium = max(0, math.floor(settings["premium_scale"] * (1 - w) ** 2 * settings["confidence_bonus"][conf_key]))
     hit = L <= p_i <= U
     penalty = 0 if hit else settings["miss_penalty"][conf_key]
     delta = premium - penalty

@@ -48,7 +48,7 @@ Larger samples give you more data but consume more of your budget.
 
 Each turn you choose **one** of two actions:
 
-### 1. 🔍 Inspect a Batch
+### 1. Inspect a Batch 🔍 
 
 Pick a batch and a sample size *n*. The game pulls *n* ducks from the batch and tells you how many defective ducks *x* you found out of *n*.
 
@@ -73,9 +73,9 @@ Your score starts at **0** and changes each time you sell a policy. Inspecting d
 
 ### Premium (What You Earn)
 
-When you sell a policy, you earn a premium based on how **narrow** your interval is and how **confident** you claim to be. A narrower interval means you're making a bolder claim, and higher confidence means the policy is worth more to the buyer — so you earn more for both:
+When you sell a policy, you earn a premium based on how **narrow** your interval is and how **confident** you claim to be. A narrower interval is worth *quadratically* more — halving the width roughly quadruples the premium. Higher confidence multiplies the premium further, but carries a steeper miss penalty:
 
-$$\text{Premium} = \left\lfloor \text{premium\_scale} \times (1 - w) \times \text{confidence\_bonus} \right\rfloor$$
+$$\text{Premium} = \left\lfloor \text{premium\_scale} \times (1 - w)^2 \times \text{confidence\_bonus} \right\rfloor$$
 
 where $w = U - L$ is the **width** of your interval.
 
@@ -83,21 +83,21 @@ With the default `premium_scale` of **120**:
 
 | Interval Width (*w*) | Confidence | Bonus | **Premium** |
 |----------------------|------------|-------|-------------|
-| 0.10                 | 90%        | 1.0×  | **108**     |
-| 0.10                 | 95%        | 1.2×  | **129**     |
-| 0.10                 | 99%        | 1.5×  | **162**     |
-| 0.20                 | 90%        | 1.0×  | **96**      |
-| 0.20                 | 95%        | 1.2×  | **115**     |
-| 0.20                 | 99%        | 1.5×  | **144**     |
-| 0.30                 | 90%        | 1.0×  | **84**      |
-| 0.30                 | 95%        | 1.2×  | **100**     |
-| 0.30                 | 99%        | 1.5×  | **126**     |
-| 0.50                 | 90%        | 1.0×  | **60**      |
-| 0.50                 | 95%        | 1.2×  | **72**      |
-| 0.50                 | 99%        | 1.5×  | **90**      |
-| 0.80                 | 90%        | 1.0×  | **24**      |
-| 0.80                 | 95%        | 1.2×  | **28**      |
-| 0.80                 | 99%        | 1.5×  | **36**      |
+| 0.10                 | 90%        | 1.0×  | **97**      |
+| 0.10                 | 95%        | 1.2×  | **116**     |
+| 0.10                 | 99%        | 1.5×  | **145**     |
+| 0.20                 | 90%        | 1.0×  | **76**      |
+| 0.20                 | 95%        | 1.2×  | **92**      |
+| 0.20                 | 99%        | 1.5×  | **115**     |
+| 0.30                 | 90%        | 1.0×  | **58**      |
+| 0.30                 | 95%        | 1.2×  | **70**      |
+| 0.30                 | 99%        | 1.5×  | **88**      |
+| 0.50                 | 90%        | 1.0×  | **30**      |
+| 0.50                 | 95%        | 1.2×  | **36**      |
+| 0.50                 | 99%        | 1.5×  | **45**      |
+| 0.80                 | 90%        | 1.0×  | **4**       |
+| 0.80                 | 95%        | 1.2×  | **5**       |
+| 0.80                 | 99%        | 1.5×  | **7**       |
 
 ### Penalty (What You Lose on a Miss)
 
@@ -106,10 +106,10 @@ If the true *p* is **not** inside your interval [L, U], you pay a penalty that d
 | Confidence Level | Bonus | Miss Penalty |
 |------------------|-------|--------------|
 | 90%              | 1.0×  | 150          |
-| 95%              | 1.2×  | 300          |
-| 99%              | 1.5×  | 500          |
+| 95%              | 1.2×  | 350          |
+| 99%              | 1.5×  | 600          |
 
-Higher confidence levels earn bigger premiums but carry steeper penalties if you miss. Think of it like real insurance: a 99% coverage guarantee is worth more to the buyer, but if you can't deliver, the fallout is severe. If you claim 99% confidence and miss, you lose **500 points**.
+Higher confidence levels earn bigger premiums but carry steeper penalties if you miss. Think of it like real insurance: a 99% coverage guarantee is worth more to the buyer, but if you can't deliver, the fallout is severe. If you claim 99% confidence and miss, you lose **600 points**.
 
 ### Net Score per Policy
 
@@ -119,14 +119,14 @@ $$\text{Net} = \text{Premium} - \text{Penalty}$$
 - On a **MISS**: Net = Premium − Penalty (usually very negative)
 
 **Example — HIT:** You sell a policy on Batch 3 with interval [0.30, 0.50] at 95% confidence.
-- Width = 0.20, Premium = floor(120 × 0.80 × 1.2) = **115**
+- Width = 0.20, Premium = floor(120 × 0.80² × 1.2) = floor(120 × 0.64 × 1.2) = **92**
 - The true defect rate is 0.42 — it's inside your interval. **HIT!** ✅
-- Net = 115 − 0 = **+115 points**
+- Net = 92 − 0 = **+92 points**
 
 **Example — MISS:** Same interval [0.30, 0.50] at 95% confidence.
-- Premium = **115** (same as above)
+- Premium = **92** (same as above)
 - The true defect rate is 0.55 — outside your interval. **MISS.** ❌
-- Net = 115 − 300 = **−185 points**
+- Net = 92 − 350 = **−258 points**
 
 
 ## Strategy Tips
@@ -159,13 +159,13 @@ Higher confidence earns more per hit but costs more per miss. Consider this comp
 
 | Confidence | Premium | Penalty on Miss | Break-Even Accuracy |
 |------------|---------|-----------------|---------------------|
-| 90%        | 96      | 150             | 61%                 |
-| 95%        | 115     | 300             | 72%                 |
-| 99%        | 144     | 500             | 78%                 |
+| 90%        | 76      | 150             | 66%                 |
+| 95%        | 92      | 350             | 79%                 |
+| 99%        | 115     | 600             | 84%                 |
 
 *Break-even accuracy = the hit rate you need for the strategy to have non-negative expected value.*
 
-The higher the confidence, the more you earn when right, but you need to hit more consistently to break even. If your data supports a 99% CI, the payoff is significantly higher than playing it safe at 90%.
+The higher the confidence, the more you earn when right, but you need to hit more consistently to break even. If your data supports a 99% CI, the payoff is significantly higher than playing it safe at 90%. But width matters even more — narrowing your interval gives you *quadratically* increasing returns.
 
 
 
@@ -184,8 +184,8 @@ The higher the confidence, the more you earn when right, but you need to hit mor
 | Confidence | Bonus | Miss Penalty |
 |------------|-------|--------------|
 | 90%        | 1.0×  | 150          |
-| 95%        | 1.2×  | 300          |
-| 99%        | 1.5×  | 500          |
+| 95%        | 1.2×  | 350          |
+| 99%        | 1.5×  | 600          |
 
 
 ## FAQ
@@ -194,7 +194,7 @@ The higher the confidence, the more you earn when right, but you need to hit mor
 A: No. You can only sell one policy per batch. Choose your interval carefully! You can still inspect the same batch multiple times before selling.
 
 **Q: What happens if my interval is [0.00, 1.00]?**
-A: It will always hit, but your premium is floor(120 × 0 × bonus) = 0. You'd earn nothing.
+A: It will always hit, but your premium is floor(120 × 0² × bonus) = 0. You'd earn nothing.
 
 **Q: Can I go negative?**
 A: Yes. Missed policies result in large deductions. A bad miss can wipe out several good sells.
