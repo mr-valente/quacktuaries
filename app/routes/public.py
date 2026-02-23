@@ -112,11 +112,11 @@ def join_session(
         request.session["session_id"] = session.id
         return RedirectResponse(url=f"/s/{session.id}", status_code=303)
 
-    # Block new player creation once the game is active (prevents multi-accounting)
-    if session.status == "active":
+    # Block new player creation if the session is locked
+    if session.status == "active" and session.locked:
         return templates.TemplateResponse(
             "join.html",
-            {"request": request, "error": "This game is already in progress. New players can only join during the lobby."},
+            {"request": request, "error": "This game is already in progress and the session is locked. New players cannot join."},
             status_code=400,
         )
 

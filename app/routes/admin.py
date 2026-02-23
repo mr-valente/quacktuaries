@@ -216,13 +216,19 @@ def admin_session_dashboard(session_id: str, request: Request, db: DBSession = D
 # ── Start / End ────────────────────────────────────────────────────────────────
 
 @router.post("/session/{session_id}/start")
-def start_session(session_id: str, request: Request, db: DBSession = Depends(get_db)):
+def start_session(
+    session_id: str,
+    request: Request,
+    lock_session: bool = Form(False),
+    db: DBSession = Depends(get_db),
+):
     teacher = _get_teacher(request, db)
     if not teacher:
         return RedirectResponse(url="/admin", status_code=303)
     session = db.query(Session).filter_by(id=session_id).first()
     if session and _require_own_session(teacher, session) and session.status == "lobby":
         session.status = "active"
+        session.locked = lock_session
         event = Event(session_id=session.id, type="SYSTEM", payload_json=json.dumps({"message": "Session started"}))
         db.add(event)
         db.commit()

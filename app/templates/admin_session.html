@@ -22,8 +22,12 @@
 {# Actions #}
 <div class="card" style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap;">
   {% if session.status == "lobby" %}
-    <form method="post" action="/admin/session/{{ session.id }}/start" style="margin:0;">
+    <form method="post" action="/admin/session/{{ session.id }}/start" style="margin:0; display:flex; align-items:center; gap:1rem;">
       <button type="submit" class="btn btn-success">▶ Start Game</button>
+      <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.9rem; cursor:pointer; margin:0;">
+        <input type="checkbox" name="lock_session" value="true">
+        Lock session
+      </label>
     </form>
     <span style="color:var(--text-muted); font-size:0.85rem;">
       Share the join code with students. Start when everyone has joined.
@@ -36,7 +40,7 @@
       </button>
     </form>
     <span style="color:var(--text-muted); font-size:0.85rem;">
-      Game is live. End it to reveal probabilities and lock scores.
+      Game is live{% if session.locked %} (locked — no new players){% endif %}. End it to reveal probabilities and lock scores.
     </span>
   {% else %}
     <span style="color:var(--text-muted);">Game has ended.</span>

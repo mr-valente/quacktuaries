@@ -57,6 +57,7 @@ class Session(Base):
     confidence_bonus_json = Column(Text, nullable=False)
     miss_penalty_json = Column(Text, nullable=False)
     require_prior_test = Column(Boolean, nullable=False, default=True)
+    locked = Column(Boolean, nullable=False, default=False)
 
     created_at = Column(DateTime, default=_utcnow)
 
