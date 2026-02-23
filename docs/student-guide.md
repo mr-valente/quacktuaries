@@ -25,7 +25,22 @@ The game presents you with a set of numbered duck batches (by default, 10). Each
 
 You have a limited number of **turns** (default: **20**) and a limited **inspection budget** (default: **400**).
 
-Every action (inspecting or selling) costs **1 turn**. Inspecting also costs *n* points from your budget, where *n* is the number of ducks you sample. Selling a policy does not cost any budget, but it does cost 1 turn. Plan carefully: once you run out of either, you're done.
+Every action (inspecting or selling) costs **1 turn**. Inspecting also costs *n* points from your budget, where *n* is the number of ducks you sample. Selling a policy does not cost any budget, but it does cost 1 turn. Plan carefully: once you run out of either, you're done — unless you buy more.
+
+### Time Limit ⏱
+
+Each game session has a **time limit** (default: **15 minutes**). A live countdown timer is displayed on your dashboard — when it reaches zero, the game ends automatically and no more actions can be taken. Keep an eye on it!
+
+### Purchasing Extra Resources 🪙
+
+Your **score** doubles as currency. You can spend points from your score to buy additional turns or inspection budget during the game:
+
+| Purchase             | Cost     |
+|----------------------|----------|
+| +1 Turn              | 🪙 40    |
+| +50 Inspection Budget| 🪙 20    |
+
+Purchase buttons appear directly below the Turns Left and Budget Left displays on your dashboard. This is a strategic trade-off: spending score now reduces your final standing, but extra resources let you inspect more batches or sell more policies. Use wisely — a purchased turn only pays off if you earn back more than you spent.
 
 ### Sample Size Limits
 
@@ -130,6 +145,12 @@ If you spend too many turns inspecting, you won't have turns left to sell polici
 - Higher confidence pays more per hit but punishes misses severely — only claim 99% when your data truly supports it. If it does, the payoff is significantly higher than playing it safe at 90%.
 - Width matters even more than confidence — narrowing your interval gives you *quadratically* increasing returns.
 
+### When to Buy Extra Resources
+
+- **Buy turns** when you've run out but still have unsold batches with good data. A turn costs 🪙40 — if your next sell earns 70+ premium, it's worth it.
+- **Buy budget** when you need more inspections but are out of sampling capacity. 50 extra budget costs only 🪙20, enough for several small inspections.
+- **Don't buy on speculation.** Only purchase resources when you have a clear plan to earn back more than you spend.
+
 
 ## Quick Reference
 
@@ -138,10 +159,13 @@ If you spend too many turns inspecting, you won't have turns left to sell polici
 | Duck Batches        | 10            |
 | Turns               | 20            |
 | Inspection budget   | 400           |
+| Time limit          | 15 minutes    |
 | Min sample size     | 5             |
 | Max sample size     | 80            |
-| Premium scale     | 120           |
-| Prior test needed | Yes           |
+| Premium scale       | 120           |
+| Prior test needed   | Yes           |
+| Buy 1 Turn          | 🪙 40         |
+| Buy 50 Budget       | 🪙 20         |
 
 | Confidence | Bonus | Miss Penalty |
 |------------|-------|--------------|
@@ -166,3 +190,9 @@ A: After the instructor ends the game. Until then, you only see your inspection 
 
 **Q: Does inspecting count toward my score?**
 A: No. Inspecting costs turns and budget but does not change your score directly. Only selling policies changes your score.
+
+**Q: Is buying extra turns or budget worth it?**
+A: It depends. A turn costs 🪙40, so you need to earn more than 40 points from that extra action to profit. If you've got data on unsold batches and expect a good premium, buying makes sense. If you're guessing, you'll probably lose money.
+
+**Q: What happens when the timer runs out?**
+A: The game ends automatically. Any actions you're in the middle of submitting will be rejected. Watch the countdown!

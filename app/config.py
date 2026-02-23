@@ -19,3 +19,9 @@ DEFAULT_PREMIUM_SCALE: int = 120
 DEFAULT_CONFIDENCE_BONUS: dict[str, float] = {"0.90": 1.0, "0.95": 1.2, "0.99": 1.5}
 DEFAULT_MISS_PENALTY: dict[str, int] = {"0.90": 150, "0.95": 350, "0.99": 600}
 DEFAULT_REQUIRE_PRIOR_TEST: bool = True
+DEFAULT_TIME_LIMIT_MINUTES: int = 15
+
+# Purchase costs (score-as-currency)
+TURN_COST: int = 40          # points to buy 1 extra turn
+BUDGET_COST: int = 20        # points to buy BUDGET_PURCHASE_AMOUNT extra budget
+BUDGET_PURCHASE_AMOUNT: int = 50  # budget units gained per purchase

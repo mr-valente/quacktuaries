@@ -7,10 +7,12 @@ import math
 import random
 import secrets
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session as DBSession
 
 from app.models import Session, Player, DeviceStat, Event
+from app.config import TURN_COST, BUDGET_COST, BUDGET_PURCHASE_AMOUNT
 
 
 # ── Device generation ──────────────────────────────────────────────────────────
@@ -93,14 +95,15 @@ def execute_test(
     # Validation
     if session.status != "active":
         raise GameError("Session is not active.")
+    _check_time_expired(db, session)
     if device_id < 0 or device_id >= session.device_count:
         raise GameError(f"Invalid batch id {device_id}.")
     if n < settings["min_n"] or n > settings["max_n"]:
         raise GameError(f"n must be between {settings['min_n']} and {settings['max_n']}.")
-    if player.turns_used >= session.max_turns:
+    if player.turns_used >= session.max_turns + player.extra_turns:
         raise GameError("No turns remaining.")
-    if player.budget_used + n > session.test_budget:
-        raise GameError(f"Insufficient inspection budget (have {session.test_budget - player.budget_used}, need {n}).")
+    if player.budget_used + n > session.test_budget + player.extra_budget:
+        raise GameError(f"Insufficient inspection budget (have {session.test_budget + player.extra_budget - player.budget_used}, need {n}).")
 
     # Block inspecting a batch that already has a sold policy
     if _has_sold_device(db, player.id, session.id, device_id):
@@ -172,9 +175,10 @@ def execute_sell(
 
     if session.status != "active":
         raise GameError("Session is not active.")
+    _check_time_expired(db, session)
     if device_id < 0 or device_id >= session.device_count:
         raise GameError(f"Invalid batch id {device_id}.")
-    if player.turns_used >= session.max_turns:
+    if player.turns_used >= session.max_turns + player.extra_turns:
         raise GameError("No turns remaining.")
 
     conf_key = confidence
@@ -237,10 +241,106 @@ def execute_sell(
     )
 
 
+# ── Purchase actions ────────────────────────────────────────────────────────────
+
+@dataclass
+class PurchaseResult:
+    item: str
+    cost: int
+    amount: int  # how many turns or budget units gained
+
+
+def execute_purchase_turn(
+    db: DBSession,
+    player: Player,
+    session: Session,
+) -> PurchaseResult:
+    """Spend score to buy 1 extra turn."""
+    if session.status != "active":
+        raise GameError("Session is not active.")
+    _check_time_expired(db, session)
+    if player.score < TURN_COST:
+        raise GameError(f"Not enough score to buy a turn (need {TURN_COST}, have {player.score}).")
+
+    player.score -= TURN_COST
+    player.extra_turns += 1
+
+    event = Event(
+        session_id=session.id,
+        player_id=player.id,
+        type="PURCHASE",
+        payload_json=json.dumps({"item": "turn", "cost": TURN_COST, "amount": 1}),
+        delta_score=-TURN_COST,
+    )
+    db.add(event)
+    db.commit()
+
+    return PurchaseResult(item="turn", cost=TURN_COST, amount=1)
+
+
+def execute_purchase_budget(
+    db: DBSession,
+    player: Player,
+    session: Session,
+) -> PurchaseResult:
+    """Spend score to buy extra inspection budget."""
+    if session.status != "active":
+        raise GameError("Session is not active.")
+    _check_time_expired(db, session)
+    if player.score < BUDGET_COST:
+        raise GameError(f"Not enough score to buy budget (need {BUDGET_COST}, have {player.score}).")
+
+    player.score -= BUDGET_COST
+    player.extra_budget += BUDGET_PURCHASE_AMOUNT
+
+    event = Event(
+        session_id=session.id,
+        player_id=player.id,
+        type="PURCHASE",
+        payload_json=json.dumps({
+            "item": "budget",
+            "cost": BUDGET_COST,
+            "amount": BUDGET_PURCHASE_AMOUNT,
+        }),
+        delta_score=-BUDGET_COST,
+    )
+    db.add(event)
+    db.commit()
+
+    return PurchaseResult(item="budget", cost=BUDGET_COST, amount=BUDGET_PURCHASE_AMOUNT)
+
+
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 class GameError(Exception):
     """Raised when a game rule is violated."""
+
+
+def get_remaining_seconds(session: Session) -> int | None:
+    """Return seconds remaining for an active session, or None if no timer."""
+    if session.started_at is None or session.time_limit_minutes <= 0:
+        return None
+    started = session.started_at
+    if started.tzinfo is None:
+        started = started.replace(tzinfo=timezone.utc)
+    elapsed = (datetime.now(timezone.utc) - started).total_seconds()
+    remaining = session.time_limit_minutes * 60 - elapsed
+    return max(0, int(remaining))
+
+
+def _check_time_expired(db: DBSession, session: Session) -> None:
+    """If the session's time limit has elapsed, auto-end it and raise."""
+    remaining = get_remaining_seconds(session)
+    if remaining is not None and remaining <= 0 and session.status == "active":
+        session.status = "ended"
+        event = Event(
+            session_id=session.id,
+            type="SYSTEM",
+            payload_json=json.dumps({"message": "Time expired — session ended automatically"}),
+        )
+        db.add(event)
+        db.commit()
+        raise GameError("Time's up! The game has ended.")
 
 
 def _has_sold_device(db: DBSession, player_id: str, session_id: str, device_id: int) -> bool:

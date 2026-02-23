@@ -11,11 +11,16 @@ from app.game import (
     GameError,
     execute_test,
     execute_sell,
+    execute_purchase_turn,
+    execute_purchase_budget,
     get_leaderboard,
     get_player_devices,
     get_player_events,
+    get_remaining_seconds,
+    _check_time_expired,
 )
 from app.templating import templates
+from app.config import TURN_COST, BUDGET_COST, BUDGET_PURCHASE_AMOUNT
 
 router = APIRouter()
 
@@ -38,10 +43,18 @@ def student_dashboard(session_id: str, request: Request, db: DBSession = Depends
     if player is None:
         return RedirectResponse(url="/join", status_code=303)
 
+    # Auto-end if time expired
+    if session.status == "active":
+        try:
+            _check_time_expired(db, session)
+        except Exception:
+            pass
+
     devices = get_player_devices(db, player.id, session.device_count)
     events = get_player_events(db, player.id, limit=20)
     leaderboard = get_leaderboard(db, session.id)
     conf_bonus = json.loads(session.confidence_bonus_json)
+    remaining = get_remaining_seconds(session)
 
     return templates.TemplateResponse("student_dashboard.html", {
         "request": request,
@@ -51,6 +64,10 @@ def student_dashboard(session_id: str, request: Request, db: DBSession = Depends
         "events": events,
         "leaderboard": leaderboard,
         "confidence_levels": list(conf_bonus.keys()),
+        "turn_cost": TURN_COST,
+        "budget_cost": BUDGET_COST,
+        "budget_amount": BUDGET_PURCHASE_AMOUNT,
+        "remaining_seconds": remaining,
         "error": request.query_params.get("error"),
         "success": request.query_params.get("success"),
     })
@@ -96,6 +113,42 @@ def do_sell(
             msg = f"SELL Batch {result.device_id}: HIT! ✅ Premium {result.premium}, +{result.delta} points"
         else:
             msg = f"SELL Batch {result.device_id}: MISS ❌ Premium {result.premium}, Penalty {result.penalty}, {result.delta} points"
+        return RedirectResponse(url=f"/s/{session_id}?success={msg}", status_code=303)
+    except GameError as e:
+        return RedirectResponse(url=f"/s/{session_id}?error={str(e)}", status_code=303)
+
+
+@router.post("/session/{session_id}/buy-turn")
+def buy_turn(
+    session_id: str,
+    request: Request,
+    db: DBSession = Depends(get_db),
+):
+    player, session = _get_player(request, session_id, db)
+    if player is None:
+        return RedirectResponse(url="/join", status_code=303)
+
+    try:
+        result = execute_purchase_turn(db, player, session)
+        msg = f"Purchased 1 extra turn for {result.cost} 🪙"
+        return RedirectResponse(url=f"/s/{session_id}?success={msg}", status_code=303)
+    except GameError as e:
+        return RedirectResponse(url=f"/s/{session_id}?error={str(e)}", status_code=303)
+
+
+@router.post("/session/{session_id}/buy-budget")
+def buy_budget(
+    session_id: str,
+    request: Request,
+    db: DBSession = Depends(get_db),
+):
+    player, session = _get_player(request, session_id, db)
+    if player is None:
+        return RedirectResponse(url="/join", status_code=303)
+
+    try:
+        result = execute_purchase_budget(db, player, session)
+        msg = f"Purchased {result.amount} extra budget for {result.cost} 🪙"
         return RedirectResponse(url=f"/s/{session_id}?success={msg}", status_code=303)
     except GameError as e:
         return RedirectResponse(url=f"/s/{session_id}?error={str(e)}", status_code=303)

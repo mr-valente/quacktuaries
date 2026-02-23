@@ -61,6 +61,15 @@
         </div>
       </div>
 
+      <div class="form-row">
+        <div class="form-group">
+          <label for="time_limit_minutes">⏱ Time Limit (minutes)</label>
+          <input type="number" id="time_limit_minutes" name="time_limit_minutes" class="form-control"
+                 value="{{ defaults.time_limit_minutes }}" min="1" max="180">
+          <small style="color:var(--text-muted); font-size:0.75rem;">Game auto-ends when time runs out.</small>
+        </div>
+      </div>
+
       <button type="submit" class="btn btn-primary" style="width:100%; margin-top:0.5rem;">Create Session</button>
     </form>
   </div>

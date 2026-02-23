@@ -157,6 +157,8 @@
     }
     .stat-card .stat-value { font-size: 1.75rem; font-weight: 700; color: var(--primary); }
     .stat-card .stat-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-card-timer { border-color: var(--info); }
+    .stat-card-timer .stat-value { font-family: 'SF Mono', 'Fira Code', monospace; color: var(--info); }
 
     /* Badge */
     .badge {
@@ -215,6 +217,21 @@
     .event-delta { font-weight: 600; }
     .event-delta.positive { color: var(--success); }
     .event-delta.negative { color: var(--danger); }
+
+    /* Coin / purchase style */
+    .stat-card-score { border-color: var(--duck-yellow); }
+    .coin-value { color: var(--duck-yellow) !important; }
+    .btn-coin {
+      background: var(--duck-yellow);
+      color: #111;
+      margin-top: 0.5rem;
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+      white-space: nowrap;
+    }
+    .btn-coin:hover { background: var(--duck-yellow-hover); }
+    .purchase-form { margin-top: 0.4rem; }
+    .event-type-PURCHASE { color: var(--duck-yellow); }
   </style>
   {% block head %}{% endblock %}
 </head>

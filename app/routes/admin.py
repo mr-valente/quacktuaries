@@ -19,6 +19,7 @@ from app.config import (
     DEFAULT_CONFIDENCE_BONUS,
     DEFAULT_MISS_PENALTY,
     DEFAULT_REQUIRE_PRIOR_TEST,
+    DEFAULT_TIME_LIMIT_MINUTES,
 )
 from app.database import get_db
 from app.models import Session, Player, Event, Teacher
@@ -26,6 +27,8 @@ from app.game import (
     generate_device_ps,
     generate_join_code,
     get_leaderboard,
+    get_remaining_seconds,
+    _check_time_expired,
     DIFFICULTY_PRESETS,
 )
 from app.templating import templates
@@ -135,6 +138,7 @@ def new_session_form(request: Request, db: DBSession = Depends(get_db)):
             "min_n": DEFAULT_MIN_N,
             "max_n": DEFAULT_MAX_N,
             "premium_scale": DEFAULT_PREMIUM_SCALE,
+            "time_limit_minutes": DEFAULT_TIME_LIMIT_MINUTES,
         },
         "teacher": teacher,
     })
@@ -150,6 +154,7 @@ def create_session(
     min_n: int = Form(DEFAULT_MIN_N),
     max_n: int = Form(DEFAULT_MAX_N),
     premium_scale: int = Form(DEFAULT_PREMIUM_SCALE),
+    time_limit_minutes: int = Form(DEFAULT_TIME_LIMIT_MINUTES),
     db: DBSession = Depends(get_db),
 ):
     teacher = _get_teacher(request, db)
@@ -179,6 +184,7 @@ def create_session(
         confidence_bonus_json=json.dumps(DEFAULT_CONFIDENCE_BONUS),
         miss_penalty_json=json.dumps(DEFAULT_MISS_PENALTY),
         require_prior_test=DEFAULT_REQUIRE_PRIOR_TEST,
+        time_limit_minutes=time_limit_minutes,
     )
     db.add(session)
     db.commit()
@@ -199,9 +205,17 @@ def admin_session_dashboard(session_id: str, request: Request, db: DBSession = D
     if not session or not _require_own_session(teacher, session):
         return RedirectResponse(url="/admin/dashboard", status_code=303)
 
+    # Auto-end if time expired
+    if session.status == "active":
+        try:
+            _check_time_expired(db, session)
+        except Exception:
+            pass
+
     leaderboard = get_leaderboard(db, session.id)
     players = db.query(Player).filter_by(session_id=session.id).all()
     device_ps = json.loads(session.device_ps_json)
+    remaining = get_remaining_seconds(session)
 
     return templates.TemplateResponse("admin_session.html", {
         "request": request,
@@ -210,6 +224,7 @@ def admin_session_dashboard(session_id: str, request: Request, db: DBSession = D
         "players": players,
         "device_ps": device_ps,
         "teacher": teacher,
+        "remaining_seconds": remaining,
     })
 
 
@@ -227,8 +242,10 @@ def start_session(
         return RedirectResponse(url="/admin", status_code=303)
     session = db.query(Session).filter_by(id=session_id).first()
     if session and _require_own_session(teacher, session) and session.status == "lobby":
+        from datetime import datetime, timezone
         session.status = "active"
         session.locked = lock_session
+        session.started_at = datetime.now(timezone.utc)
         event = Event(session_id=session.id, type="SYSTEM", payload_json=json.dumps({"message": "Session started"}))
         db.add(event)
         db.commit()

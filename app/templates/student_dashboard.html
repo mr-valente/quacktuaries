@@ -26,17 +26,27 @@
 
 {# Stats row #}
 <div class="stats-row">
-  <div class="stat-card">
-    <div class="stat-value">{{ player.score }}</div>
+  <div class="stat-card stat-card-score">
+    <div class="stat-value coin-value">🪙 {{ player.score }}</div>
     <div class="stat-label">Score</div>
   </div>
   <div class="stat-card">
-    <div class="stat-value">{{ session.max_turns - player.turns_used }}</div>
+    <div class="stat-value">{{ session.max_turns + player.extra_turns - player.turns_used }}</div>
     <div class="stat-label">Turns Left</div>
+    {% if session.status == "active" %}
+    <form method="post" action="/session/{{ session.id }}/buy-turn" class="purchase-form">
+      <button type="submit" class="btn btn-coin btn-sm" title="Buy 1 extra turn">+1 Turn · 🪙{{ turn_cost }}</button>
+    </form>
+    {% endif %}
   </div>
   <div class="stat-card">
-    <div class="stat-value">{{ session.test_budget - player.budget_used }}</div>
+    <div class="stat-value">{{ session.test_budget + player.extra_budget - player.budget_used }}</div>
     <div class="stat-label">Budget Left</div>
+    {% if session.status == "active" %}
+    <form method="post" action="/session/{{ session.id }}/buy-budget" class="purchase-form">
+      <button type="submit" class="btn btn-coin btn-sm" title="Buy {{ budget_amount }} extra budget">+{{ budget_amount }} Budget · 🪙{{ budget_cost }}</button>
+    </form>
+    {% endif %}
   </div>
   <div class="stat-card">
     <div class="stat-value">
@@ -44,6 +54,12 @@
     </div>
     <div class="stat-label">Status</div>
   </div>
+  {% if remaining_seconds is not none %}
+  <div class="stat-card stat-card-timer" id="timer-card">
+    <div class="stat-value" id="timer-display">--:--</div>
+    <div class="stat-label">⏱ Time Left</div>
+  </div>
+  {% endif %}
 </div>
 
 <div class="grid-2">
@@ -71,7 +87,7 @@
       </table>
     </div>
 
-    {% if session.status == "active" and player.turns_used < session.max_turns %}
+    {% if session.status == "active" and player.turns_used < session.max_turns + player.extra_turns %}
     {# Inspect form #}
     <div class="card">
       <h3>🔍 Inspect a Batch</h3>
@@ -174,6 +190,8 @@
             Batch {{ e.payload.device_id }} [{{ e.payload.L }}, {{ e.payload.U }}]
             @ {{ e.payload.confidence }} →
             {% if e.payload.hit %}✅ HIT{% else %}❌ MISS{% endif %}
+          {% elif e.type == "PURCHASE" %}
+            Bought {{ e.payload.amount }}× {{ e.payload.item }}
           {% endif %}
           {% if e.delta_score != 0 %}
             <span class="event-delta {% if e.delta_score > 0 %}positive{% else %}negative{% endif %}">
@@ -189,4 +207,63 @@
     </div>
   </div>
 </div>
+
+{% if remaining_seconds is not none %}
+<script>
+(function() {
+  var remaining = {{ remaining_seconds }};
+  var sessionId = "{{ session.id }}";
+  var timerEl = document.getElementById('timer-display');
+  var timerCard = document.getElementById('timer-card');
+  var ended = {{ 'true' if session.status == 'ended' else 'false' }};
+
+  function fmt(s) {
+    if (s <= 0) return "0:00";
+    var m = Math.floor(s / 60);
+    var sec = s % 60;
+    return m + ":" + (sec < 10 ? "0" : "") + sec;
+  }
+
+  function updateDisplay() {
+    if (ended) {
+      timerEl.textContent = "ENDED";
+      timerEl.style.color = "var(--text-muted)";
+      return;
+    }
+    timerEl.textContent = fmt(remaining);
+    if (remaining <= 60) {
+      timerCard.style.borderColor = "var(--danger)";
+      timerEl.style.color = "var(--danger)";
+    } else if (remaining <= 180) {
+      timerCard.style.borderColor = "var(--warning)";
+      timerEl.style.color = "var(--warning)";
+    }
+  }
+
+  updateDisplay();
+
+  if (!ended) {
+    setInterval(function() {
+      remaining = Math.max(0, remaining - 1);
+      updateDisplay();
+      if (remaining <= 0) {
+        setTimeout(function() { location.reload(); }, 1500);
+      }
+    }, 1000);
+
+    // Poll server every 10s: keepalive + sync
+    setInterval(function() {
+      fetch("/api/session/" + sessionId + "/timer")
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (d.remaining_seconds != null) remaining = d.remaining_seconds;
+          if (d.status === "ended") location.reload();
+        })
+        .catch(function() {});
+    }, 10000);
+  }
+})();
+</script>
+{% endif %}
+
 {% endblock %}

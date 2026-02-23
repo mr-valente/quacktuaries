@@ -43,10 +43,10 @@ uvicorn app.main:app --reload --port 8000
 
 ### Teacher Setup
 1. Go to `/admin` and enter your name to start a teacher session
-2. Create a new session — choose a difficulty preset (Easy / Medium / Hard) which configures batch count, turn limits, and inspection budget
+2. Create a new session — choose a difficulty preset (Easy / Medium / Hard) which configures batch count, turn limits, inspection budget, and time limit
 3. Share the **join code** (e.g., `AB12CD`) with students
-4. Click **Start Game** when everyone has joined
-5. Click **End Game** when time is up — this reveals the true defect rates
+4. Click **Start Game** when everyone has joined — the countdown timer begins
+5. The game **auto-ends** when the timer expires, or click **End Game** manually — this reveals the true defect rates
 6. Use the **Show/Hide** toggle on your dashboard to peek at defect rates mid-game
 
 ### Student Gameplay
@@ -54,9 +54,10 @@ uvicorn app.main:app --reload --port 8000
 2. Each turn, you can either:
    - **INSPECT** a duck batch: choose batch + sample size *n*, pull *n* ducks and find *x* defective ones (uses 1 turn + *n* budget)
    - **SELL POLICY**: estimate a confidence interval [L, U] for a batch's true defect rate *p* (one policy per batch)
+   - **BUY RESOURCES**: spend score 🪙 to purchase extra turns (40 pts) or inspection budget (20 pts for 50 units)
 3. Selling earns a premium based on interval width, but penalizes misses based on confidence level
 4. Once you sell a policy on a batch, that batch is locked — no more inspections or policies on it
-5. Maximize your score within the turn and budget limits 🦆
+5. Maximize your score within the turn, budget, and time limits 🦆
 
 A full **Student Guide** is available in-app at `/guide`.
 
@@ -69,6 +70,7 @@ A full **Student Guide** is available in-app at `/guide`.
 | Inspection Budget | 500 | 400 | 300 |
 | Min Sample Size | 5 | 5 | 10 |
 | Max Sample Size | 100 | 80 | 60 |
+| Time Limit | 15 min | 15 min | 15 min |
 
 ### Scoring
 - **Premium** = `floor(premium_scale × (1 - width)² × confidence_bonus)`

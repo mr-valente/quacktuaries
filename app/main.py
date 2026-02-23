@@ -7,7 +7,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import SESSION_SECRET
 from app.database import init_db
-from app.routes import public, student, admin
+from app.routes import public, student, admin, api
 
 app = FastAPI(title="Quacktuaries", docs_url=None, redoc_url=None)
 
@@ -23,6 +23,7 @@ app.mount("/static", StaticFiles(directory=_static_dir), name="static")
 app.include_router(public.router)
 app.include_router(student.router)
 app.include_router(admin.router)
+app.include_router(api.router)
 
 
 @app.on_event("startup")

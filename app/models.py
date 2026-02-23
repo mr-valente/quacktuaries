@@ -58,6 +58,8 @@ class Session(Base):
     miss_penalty_json = Column(Text, nullable=False)
     require_prior_test = Column(Boolean, nullable=False, default=True)
     locked = Column(Boolean, nullable=False, default=False)
+    time_limit_minutes = Column(Integer, nullable=False, default=15)
+    started_at = Column(DateTime, nullable=True)
 
     created_at = Column(DateTime, default=_utcnow)
 
@@ -76,6 +78,8 @@ class Player(Base):
     score = Column(Integer, nullable=False, default=0)
     turns_used = Column(Integer, nullable=False, default=0)
     budget_used = Column(Integer, nullable=False, default=0)
+    extra_turns = Column(Integer, nullable=False, default=0)
+    extra_budget = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime, default=_utcnow)
 
     session = relationship("Session", back_populates="players")

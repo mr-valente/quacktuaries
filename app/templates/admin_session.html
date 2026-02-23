@@ -69,6 +69,12 @@
     <div class="stat-value">{{ session.test_budget }}</div>
     <div class="stat-label">Test Budget</div>
   </div>
+  {% if remaining_seconds is not none %}
+  <div class="stat-card stat-card-timer" id="timer-card">
+    <div class="stat-value" id="timer-display">--:--</div>
+    <div class="stat-label">⏱ Time Left</div>
+  </div>
+  {% endif %}
 </div>
 
 <div class="grid-2">
@@ -146,6 +152,66 @@ function toggleRates() {
     <tr><td style="color:var(--text-muted);">Min/Max n per test</td><td>{{ session.min_n }} – {{ session.max_n }}</td></tr>
     <tr><td style="color:var(--text-muted);">Premium Scale</td><td>{{ session.premium_scale }}</td></tr>
     <tr><td style="color:var(--text-muted);">Require Prior Test</td><td>{{ "Yes" if session.require_prior_test else "No" }}</td></tr>
+    <tr><td style="color:var(--text-muted);">Time Limit</td><td>{{ session.time_limit_minutes }} minutes</td></tr>
   </table>
 </div>
+
+{% if remaining_seconds is not none %}
+<script>
+(function() {
+  var remaining = {{ remaining_seconds }};
+  var sessionId = "{{ session.id }}";
+  var timerEl = document.getElementById('timer-display');
+  var timerCard = document.getElementById('timer-card');
+  var ended = {{ 'true' if session.status == 'ended' else 'false' }};
+
+  function fmt(s) {
+    if (s <= 0) return "0:00";
+    var m = Math.floor(s / 60);
+    var sec = s % 60;
+    return m + ":" + (sec < 10 ? "0" : "") + sec;
+  }
+
+  function updateDisplay() {
+    if (ended) {
+      timerEl.textContent = "ENDED";
+      timerEl.style.color = "var(--text-muted)";
+      return;
+    }
+    timerEl.textContent = fmt(remaining);
+    if (remaining <= 60) {
+      timerCard.style.borderColor = "var(--danger)";
+      timerEl.style.color = "var(--danger)";
+    } else if (remaining <= 180) {
+      timerCard.style.borderColor = "var(--warning)";
+      timerEl.style.color = "var(--warning)";
+    }
+  }
+
+  updateDisplay();
+
+  if (!ended) {
+    setInterval(function() {
+      remaining = Math.max(0, remaining - 1);
+      updateDisplay();
+      if (remaining <= 0) {
+        setTimeout(function() { location.reload(); }, 1500);
+      }
+    }, 1000);
+
+    // Poll server every 10s: keepalive + sync
+    setInterval(function() {
+      fetch("/api/session/" + sessionId + "/timer")
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (d.remaining_seconds != null) remaining = d.remaining_seconds;
+          if (d.status === "ended") location.reload();
+        })
+        .catch(function() {});
+    }, 10000);
+  }
+})();
+</script>
+{% endif %}
+
 {% endblock %}
