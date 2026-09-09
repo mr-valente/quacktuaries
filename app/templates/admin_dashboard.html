@@ -2,9 +2,9 @@
 {% block title %}Teacher Dashboard — Quacktuaries{% endblock %}
 
 {% block nav_links %}
-  <a href="/admin/dashboard">Dashboard</a>
-  <a href="/admin/sessions/new">+ New Session</a>
-  <a href="/admin/logout">Logout</a>
+  <a href="{{ request.url_for('admin_dashboard') }}">Dashboard</a>
+  <a href="{{ request.url_for('new_session_form') }}">+ New Session</a>
+  <a href="{{ request.url_for('admin_logout') }}">Logout</a>
   <span style="color:var(--text-muted);">|</span>
   <span style="color:var(--text-muted); font-size:0.85rem;">👩‍🏫 {{ teacher.name }}</span>
 {% endblock %}
@@ -13,7 +13,7 @@
 <h2 style="margin-bottom:1.5rem;">📋 Sessions</h2>
 
 <div style="margin-bottom:1.5rem;">
-  <a href="/admin/sessions/new" class="btn btn-primary">+ Create New Session</a>
+  <a href="{{ request.url_for('new_session_form') }}" class="btn btn-primary">+ Create New Session</a>
 </div>
 
 {% if sessions %}
@@ -37,7 +37,7 @@
         <td>{{ s.players | length }}</td>
         <td>{{ s.device_count }}</td>
         <td style="color:var(--text-muted); font-size:0.85rem;">{{ s.created_at.strftime('%b %d, %H:%M') if s.created_at else '—' }}</td>
-        <td><a href="/admin/s/{{ s.id }}" class="btn btn-primary btn-sm">Manage</a></td>
+        <td><a href="{{ request.url_for('admin_session_dashboard', session_id=s.id) }}" class="btn btn-primary btn-sm">Manage</a></td>
       </tr>
       {% endfor %}
     </tbody>

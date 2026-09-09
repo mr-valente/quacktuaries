@@ -3,9 +3,9 @@
 {% block container_class %}container-wide{% endblock %}
 
 {% block nav_links %}
-  <a href="/admin/dashboard">Dashboard</a>
-  <a href="/admin/sessions/new">+ New</a>
-  <a href="/admin/logout">Logout</a>
+  <a href="{{ request.url_for('admin_dashboard') }}">Dashboard</a>
+  <a href="{{ request.url_for('new_session_form') }}">+ New</a>
+  <a href="{{ request.url_for('admin_logout') }}">Logout</a>
   <span style="color:var(--text-muted);">|</span>
   <span style="color:var(--text-muted); font-size:0.85rem;">👩‍🏫 {{ teacher.name }}</span>
 {% endblock %}
@@ -22,7 +22,7 @@
 {# Actions #}
 <div class="card" style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap;">
   {% if session.status == "lobby" %}
-    <form method="post" action="/admin/session/{{ session.id }}/start" style="margin:0; display:flex; align-items:center; gap:1rem;">
+    <form method="post" action="{{ request.url_for('start_session', session_id=session.id) }}" style="margin:0; display:flex; align-items:center; gap:1rem;">
       <button type="submit" class="btn btn-success">▶ Start Game</button>
       <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.9rem; cursor:pointer; margin:0;">
         <input type="checkbox" name="lock_session" value="true">
@@ -33,7 +33,7 @@
       Share the join code with students. Start when everyone has joined.
     </span>
   {% elif session.status == "active" %}
-    <form method="post" action="/admin/session/{{ session.id }}/end" style="margin:0;">
+    <form method="post" action="{{ request.url_for('end_session', session_id=session.id) }}" style="margin:0;">
       <button type="submit" class="btn btn-danger"
               onclick="return confirm('End the game? This cannot be undone.');">
         ⏹ End Game
@@ -46,7 +46,7 @@
     <span style="color:var(--text-muted);">Game has ended.</span>
   {% endif %}
 
-  <a href="/admin/session/{{ session.id }}/export" class="btn btn-primary btn-sm" style="margin-left:auto;">
+  <a href="{{ request.url_for('export_events_csv', session_id=session.id) }}" class="btn btn-primary btn-sm" style="margin-left:auto;">
     📥 Export CSV
   </a>
 </div>
@@ -201,7 +201,7 @@ function toggleRates() {
 
     // Poll server every 10s: keepalive + sync
     setInterval(function() {
-      fetch("/api/session/" + sessionId + "/timer")
+      fetch({{ request.url_for('session_timer', session_id=session.id) | string | tojson }})
         .then(function(r) { return r.json(); })
         .then(function(d) {
           if (d.remaining_seconds != null) remaining = d.remaining_seconds;

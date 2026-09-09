@@ -10,7 +10,8 @@ Built with **Python/FastAPI**, **Jinja2** server-rendered templates, and **SQLit
 # 1. Clone and enter the project
 cd quacktuaries
 
-# 2. Set SESSION_SECRET in docker-compose.yml (or use env vars)
+# 2. Generate a persistent local key in your shell (save it securely for reuse)
+export SESSION_SECRET="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
 
 # 3. Build and run
 docker compose up -d --build
@@ -27,17 +28,21 @@ python3 -m venv .venv
 source .venv/bin/activate
 
 # 2. Install dependencies
-pip install -r requirements.txt
+pip install -r requirements.lock
 
 # 3. Set environment variables
 export SESSION_SECRET="your-secret"
-export DB_PATH="./dev.db"
+export DB_PATH="$PWD/dev.db"
 
 # 4. Run the server
 uvicorn app.main:app --reload --port 8000
 
 # 5. Open http://localhost:8000
 ```
+
+## Athenaeum integration
+
+For the local HTTPS ecosystem, use the sibling Athenaeum checkout and its `docs/local-ecosystem.md`. This application remains independently buildable and still supports standalone root-path development. See [deployment contract](docs/deployment.md) for prefix, cookie, data, health, and ARM details. No Cloud Run cutover is included.
 
 ## How to Play
 
@@ -89,10 +94,13 @@ All settings are controlled via environment variables:
 
 | Variable         | Default       | Description                          |
 |-----------------|---------------|--------------------------------------|
-| `SESSION_SECRET` | (random)      | Secret key for signed cookies        |
+| `SESSION_SECRET` | random in development | Stable signing key; required in production unless supplied by file |
 | `DB_PATH`        | `/data/app.db` | Path to SQLite database file         |
-| `PORT`           | `8000`        | Server port                          |
-| `BASE_URL`       | `http://localhost:8000` | Base URL for generated links |
+| `PORT` | `8000` | Server port when started with `python -m app` |
+| `ROOT_PATH` | empty | Public prefix, e.g. `/quacktuaries`; proxy strips it upstream |
+| `APP_ENV` | `development` | `production` requires a strong stable secret and Secure cookies |
+| `SESSION_SECRET_FILE` | unset | Read signing secret from a protected file; exclusive with `SESSION_SECRET` |
+| `FORWARDED_ALLOW_IPS` | `127.0.0.1` | Trusted proxy IPs; Athenaeum sets only its edge address |
 
 ## Project Structure
 

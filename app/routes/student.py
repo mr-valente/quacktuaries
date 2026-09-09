@@ -41,7 +41,7 @@ def _get_player(request: Request, session_id: str, db: DBSession):
 def student_dashboard(session_id: str, request: Request, db: DBSession = Depends(get_db)):
     player, session = _get_player(request, session_id, db)
     if player is None:
-        return RedirectResponse(url="/join", status_code=303)
+        return RedirectResponse(url=request.url_for("join_form"), status_code=303)
 
     # Auto-end if time expired
     if session.status == "active":
@@ -56,7 +56,7 @@ def student_dashboard(session_id: str, request: Request, db: DBSession = Depends
     conf_bonus = json.loads(session.confidence_bonus_json)
     remaining = get_remaining_seconds(session)
 
-    return templates.TemplateResponse("student_dashboard.html", {
+    return templates.TemplateResponse(request=request, name="student_dashboard.html", context={
         "request": request,
         "session": session,
         "player": player,
@@ -83,14 +83,14 @@ def do_test(
 ):
     player, session = _get_player(request, session_id, db)
     if player is None:
-        return RedirectResponse(url="/join", status_code=303)
+        return RedirectResponse(url=request.url_for("join_form"), status_code=303)
 
     try:
         result = execute_test(db, player, session, device_id, n)
         msg = f"INSPECT Batch {result.device_id}: {result.x}/{result.n} defective ducks found 🦆"
-        return RedirectResponse(url=f"/s/{session_id}?success={msg}", status_code=303)
+        return RedirectResponse(url=request.url_for("student_dashboard", session_id=session_id).include_query_params(success=msg), status_code=303)
     except GameError as e:
-        return RedirectResponse(url=f"/s/{session_id}?error={str(e)}", status_code=303)
+        return RedirectResponse(url=request.url_for("student_dashboard", session_id=session_id).include_query_params(error=str(e)), status_code=303)
 
 
 @router.post("/session/{session_id}/sell")
@@ -105,7 +105,7 @@ def do_sell(
 ):
     player, session = _get_player(request, session_id, db)
     if player is None:
-        return RedirectResponse(url="/join", status_code=303)
+        return RedirectResponse(url=request.url_for("join_form"), status_code=303)
 
     try:
         result = execute_sell(db, player, session, device_id, confidence, lower, upper)
@@ -113,9 +113,9 @@ def do_sell(
             msg = f"SELL Batch {result.device_id}: HIT! ✅ Premium {result.premium}, +{result.delta} points"
         else:
             msg = f"SELL Batch {result.device_id}: MISS ❌ Premium {result.premium}, Penalty {result.penalty}, {result.delta} points"
-        return RedirectResponse(url=f"/s/{session_id}?success={msg}", status_code=303)
+        return RedirectResponse(url=request.url_for("student_dashboard", session_id=session_id).include_query_params(success=msg), status_code=303)
     except GameError as e:
-        return RedirectResponse(url=f"/s/{session_id}?error={str(e)}", status_code=303)
+        return RedirectResponse(url=request.url_for("student_dashboard", session_id=session_id).include_query_params(error=str(e)), status_code=303)
 
 
 @router.post("/session/{session_id}/buy-turn")
@@ -126,14 +126,14 @@ def buy_turn(
 ):
     player, session = _get_player(request, session_id, db)
     if player is None:
-        return RedirectResponse(url="/join", status_code=303)
+        return RedirectResponse(url=request.url_for("join_form"), status_code=303)
 
     try:
         result = execute_purchase_turn(db, player, session)
         msg = f"Purchased 1 extra turn for {result.cost} 🪙"
-        return RedirectResponse(url=f"/s/{session_id}?success={msg}", status_code=303)
+        return RedirectResponse(url=request.url_for("student_dashboard", session_id=session_id).include_query_params(success=msg), status_code=303)
     except GameError as e:
-        return RedirectResponse(url=f"/s/{session_id}?error={str(e)}", status_code=303)
+        return RedirectResponse(url=request.url_for("student_dashboard", session_id=session_id).include_query_params(error=str(e)), status_code=303)
 
 
 @router.post("/session/{session_id}/buy-budget")
@@ -144,11 +144,11 @@ def buy_budget(
 ):
     player, session = _get_player(request, session_id, db)
     if player is None:
-        return RedirectResponse(url="/join", status_code=303)
+        return RedirectResponse(url=request.url_for("join_form"), status_code=303)
 
     try:
         result = execute_purchase_budget(db, player, session)
         msg = f"Purchased {result.amount} extra budget for {result.cost} 🪙"
-        return RedirectResponse(url=f"/s/{session_id}?success={msg}", status_code=303)
+        return RedirectResponse(url=request.url_for("student_dashboard", session_id=session_id).include_query_params(success=msg), status_code=303)
     except GameError as e:
-        return RedirectResponse(url=f"/s/{session_id}?error={str(e)}", status_code=303)
+        return RedirectResponse(url=request.url_for("student_dashboard", session_id=session_id).include_query_params(error=str(e)), status_code=303)

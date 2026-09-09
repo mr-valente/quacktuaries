@@ -1,23 +1,13 @@
-FROM python:3.12-slim
-
+FROM python:3.12-slim-bookworm@sha256:782412e85d0f0984994c290652577d4018aff08145c85b262bb63dc0c7522254
 WORKDIR /app
-
-# Install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy application
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 DB_PATH=/data/app.db PORT=8000
+COPY requirements.lock ./
+RUN pip install --no-cache-dir --only-binary=:all: -r requirements.lock
 COPY app/ ./app/
-COPY docs/ ./docs/
-
-# Create data directory
-RUN mkdir -p /data
-
-# Environment defaults
-ENV SESSION_SECRET=change-me-too
-ENV DB_PATH=/data/app.db
-ENV PORT=8000
-
+COPY docs/student-guide.md ./docs/student-guide.md
+RUN mkdir -p /data /app/app/static && chown 10001:10001 /data
+USER 10001:10001
 EXPOSE 8000
-
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+HEALTHCHECK --interval=15s --timeout=3s --start-period=5s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/_health', timeout=2).read()" || exit 1
+CMD ["python", "-m", "app"]

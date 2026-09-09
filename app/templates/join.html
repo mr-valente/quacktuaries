@@ -10,7 +10,7 @@
     <div class="alert alert-error">{{ error }}</div>
     {% endif %}
 
-    <form method="post" action="/session/join">
+    <form method="post" action="{{ request.url_for('join_session') }}">
       <div class="form-group">
         <label for="join_code">Join Code</label>
         <input type="text" id="join_code" name="join_code" class="form-control"

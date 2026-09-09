@@ -1,0 +1,10 @@
+{
+  "services": {
+    "quacktuaries": {
+      "dockerfile": "Dockerfile",
+      "image_name": "quacktuaries",
+      "style_version": "unselected",
+      "schema_version": 0
+    }
+  }
+}

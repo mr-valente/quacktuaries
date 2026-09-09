@@ -2,8 +2,8 @@
 {% block title %}New Session — Quacktuaries{% endblock %}
 
 {% block nav_links %}
-  <a href="/admin/dashboard">Dashboard</a>
-  <a href="/admin/logout">Logout</a>
+  <a href="{{ request.url_for('admin_dashboard') }}">Dashboard</a>
+  <a href="{{ request.url_for('admin_logout') }}">Logout</a>
   <span style="color:var(--text-muted);">|</span>
   <span style="color:var(--text-muted); font-size:0.85rem;">👩‍🏫 {{ teacher.name }}</span>
 {% endblock %}
@@ -13,7 +13,7 @@
   <div class="card">
     <h2>Create New Session</h2>
 
-    <form method="post" action="/admin/session/create">
+    <form method="post" action="{{ request.url_for('create_session') }}">
       <div class="form-group">
         <label for="difficulty">Difficulty Preset</label>
         <select id="difficulty" name="difficulty" class="form-control">

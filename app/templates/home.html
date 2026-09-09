@@ -11,8 +11,8 @@
   <p>A proportions-estimation game for learning statistical inference.<br>
   Inspect batches of rubber ducks, estimate defect rates, and sell insurance policies to maximize your score.</p>
   <div class="hero-actions">
-    <a href="/join" class="btn btn-primary">Join a Game</a>
-    <a href="/admin" class="btn btn-warning">Teacher Login</a>
+    <a href="{{ request.url_for('join_form') }}" class="btn btn-primary">Join a Game</a>
+    <a href="{{ request.url_for('admin_login_page') }}" class="btn btn-warning">Teacher Login</a>
   </div>
 </div>
 

@@ -1,15 +1,18 @@
 """Database engine and session setup for SQLite via SQLAlchemy."""
 
 import os
+import sqlite3
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-_db_path = os.environ.get("DB_PATH", "/data/app.db")
-_db_dir = os.path.dirname(_db_path)
-if _db_dir and not os.path.exists(_db_dir):
-    os.makedirs(_db_dir, exist_ok=True)
+from app.config import DB_PATH, PRODUCTION
 
-DATABASE_URL = f"sqlite:///{_db_path}"
+if not DB_PATH.parent.is_dir():
+    if PRODUCTION:
+        raise RuntimeError("Database directory is missing; mount the application's data directory")
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+DATABASE_URL = f"sqlite:///{DB_PATH}"
 
 engine = create_engine(
     DATABASE_URL,
@@ -33,3 +36,14 @@ def get_db():
 def init_db():
     """Create all tables."""
     Base.metadata.create_all(bind=engine)
+
+
+def database_ready() -> bool:
+    """Read-only probe: never create a replacement database or change game state."""
+    try:
+        with sqlite3.connect(DB_PATH.as_uri() + "?mode=ro", uri=True, timeout=1) as db:
+            db.execute("SELECT id FROM teachers LIMIT 1").fetchone()
+            db.execute("SELECT id FROM sessions LIMIT 1").fetchone()
+        return True
+    except sqlite3.Error:
+        return False

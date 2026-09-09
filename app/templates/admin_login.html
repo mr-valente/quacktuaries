@@ -13,7 +13,7 @@
     <div class="alert alert-error">{{ error }}</div>
     {% endif %}
 
-    <form method="post" action="/admin/login">
+    <form method="post" action="{{ request.url_for('admin_login') }}">
       <div class="form-group">
         <label for="teacher_name">Your Name</label>
         <input type="text" id="teacher_name" name="teacher_name" class="form-control"

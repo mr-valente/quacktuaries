@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦆</text></svg>">
+  <link rel="icon" href="{{ request.url_for('static', path='favicon.svg') }}">
   <title>{% block title %}Quacktuaries{% endblock %}</title>
   <style>
     :root {
@@ -237,12 +237,12 @@
 </head>
 <body>
   <nav class="navbar">
-    <a href="/" class="navbar-brand">🦆 Quacktuaries</a>
+    <a href="{{ request.url_for('home') }}" class="navbar-brand">🦆 Quacktuaries</a>
     <div class="navbar-links">
       {% block nav_links %}
-        <a href="/">Home</a>
-        <a href="/guide">Guide</a>
-        <a href="/admin">Teacher</a>
+        <a href="{{ request.url_for('home') }}">Home</a>
+        <a href="{{ request.url_for('student_guide') }}">Guide</a>
+        <a href="{{ request.url_for('admin_login_page') }}">Teacher</a>
       {% endblock %}
     </div>
   </nav>

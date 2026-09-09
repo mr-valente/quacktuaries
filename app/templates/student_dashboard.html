@@ -3,7 +3,7 @@
 {% block container_class %}container-wide{% endblock %}
 
 {% block nav_links %}
-  <a href="/">Home</a>
+  <a href="{{ request.url_for('home') }}">Home</a>
   <span style="color:var(--text-muted);">|</span>
   <span style="color:var(--text-muted); font-size:0.85rem;">{{ player.name }}</span>
 {% endblock %}
@@ -34,7 +34,7 @@
     <div class="stat-value">{{ session.max_turns + player.extra_turns - player.turns_used }}</div>
     <div class="stat-label">Turns Left</div>
     {% if session.status == "active" %}
-    <form method="post" action="/session/{{ session.id }}/buy-turn" class="purchase-form">
+    <form method="post" action="{{ request.url_for('buy_turn', session_id=session.id) }}" class="purchase-form">
       <button type="submit" class="btn btn-coin btn-sm" title="Buy 1 extra turn">+1 Turn · 🪙{{ turn_cost }}</button>
     </form>
     {% endif %}
@@ -43,7 +43,7 @@
     <div class="stat-value">{{ session.test_budget + player.extra_budget - player.budget_used }}</div>
     <div class="stat-label">Budget Left</div>
     {% if session.status == "active" %}
-    <form method="post" action="/session/{{ session.id }}/buy-budget" class="purchase-form">
+    <form method="post" action="{{ request.url_for('buy_budget', session_id=session.id) }}" class="purchase-form">
       <button type="submit" class="btn btn-coin btn-sm" title="Buy {{ budget_amount }} extra budget">+{{ budget_amount }} Budget · 🪙{{ budget_cost }}</button>
     </form>
     {% endif %}
@@ -91,7 +91,7 @@
     {# Inspect form #}
     <div class="card">
       <h3>🔍 Inspect a Batch</h3>
-      <form method="post" action="/session/{{ session.id }}/test">
+      <form method="post" action="{{ request.url_for('do_test', session_id=session.id) }}">
         <div class="form-row">
           <div class="form-group">
             <label for="test_device">Batch</label>
@@ -117,7 +117,7 @@
     {# Sell form #}
     <div class="card">
       <h3>💰 Sell a Policy</h3>
-      <form method="post" action="/session/{{ session.id }}/sell">
+      <form method="post" action="{{ request.url_for('do_sell', session_id=session.id) }}">
         <div class="form-row">
           <div class="form-group">
             <label for="sell_device">Batch</label>
@@ -253,7 +253,7 @@
 
     // Poll server every 10s: keepalive + sync
     setInterval(function() {
-      fetch("/api/session/" + sessionId + "/timer")
+      fetch({{ request.url_for('session_timer', session_id=session.id) | string | tojson }})
         .then(function(r) { return r.json(); })
         .then(function(d) {
           if (d.remaining_seconds != null) remaining = d.remaining_seconds;

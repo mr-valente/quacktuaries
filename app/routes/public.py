@@ -52,17 +52,17 @@ with open(_guide_md_path, "r") as f:
 
 @router.get("/", response_class=HTMLResponse)
 def home(request: Request):
-    return templates.TemplateResponse("home.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="home.html", context={"request": request})
 
 
 @router.get("/guide", response_class=HTMLResponse)
 def student_guide(request: Request):
-    return templates.TemplateResponse("guide.html", {"request": request, "guide_html": _guide_html})
+    return templates.TemplateResponse(request=request, name="guide.html", context={"request": request, "guide_html": _guide_html})
 
 
 @router.get("/join", response_class=HTMLResponse)
 def join_form(request: Request):
-    return templates.TemplateResponse("join.html", {"request": request, "error": None})
+    return templates.TemplateResponse(request=request, name="join.html", context={"request": request, "error": None})
 
 
 @router.post("/session/join")
@@ -76,24 +76,18 @@ def join_session(
     player_name = player_name.strip()
 
     if not player_name:
-        return templates.TemplateResponse(
-            "join.html",
-            {"request": request, "error": "Please enter your name."},
+        return templates.TemplateResponse(request=request, name="join.html", context={"request": request, "error": "Please enter your name."},
             status_code=400,
         )
 
     session = db.query(Session).filter_by(join_code=join_code).first()
     if session is None:
-        return templates.TemplateResponse(
-            "join.html",
-            {"request": request, "error": f"No session found with code '{join_code}'."},
+        return templates.TemplateResponse(request=request, name="join.html", context={"request": request, "error": f"No session found with code '{join_code}'."},
             status_code=404,
         )
 
     if session.status == "ended":
-        return templates.TemplateResponse(
-            "join.html",
-            {"request": request, "error": "This session has already ended."},
+        return templates.TemplateResponse(request=request, name="join.html", context={"request": request, "error": "This session has already ended."},
             status_code=400,
         )
 
@@ -103,20 +97,16 @@ def join_session(
         # Re-join: verify the rejoin token from the cookie
         cookie_token = request.session.get("rejoin_token")
         if cookie_token != existing.rejoin_token:
-            return templates.TemplateResponse(
-                "join.html",
-                {"request": request, "error": "That name is already taken in this session."},
+            return templates.TemplateResponse(request=request, name="join.html", context={"request": request, "error": "That name is already taken in this session."},
                 status_code=400,
             )
         request.session["player_id"] = existing.id
         request.session["session_id"] = session.id
-        return RedirectResponse(url=f"/s/{session.id}", status_code=303)
+        return RedirectResponse(url=request.url_for("student_dashboard", session_id=session.id), status_code=303)
 
     # Block new player creation if the session is locked
     if session.status == "active" and session.locked:
-        return templates.TemplateResponse(
-            "join.html",
-            {"request": request, "error": "This game is already in progress and the session is locked. New players cannot join."},
+        return templates.TemplateResponse(request=request, name="join.html", context={"request": request, "error": "This game is already in progress and the session is locked. New players cannot join."},
             status_code=400,
         )
 
@@ -130,7 +120,7 @@ def join_session(
     request.session["session_id"] = session.id
     request.session["rejoin_token"] = rejoin_token
 
-    return RedirectResponse(url=f"/s/{session.id}", status_code=303)
+    return RedirectResponse(url=request.url_for("student_dashboard", session_id=session.id), status_code=303)
 
 
 @router.get("/session/{session_id}/state")
