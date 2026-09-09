@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
-"""Build and smoke-test native images; publish a verified multi-platform tag."""
+"""Build and smoke-test native images without publishing."""
 import argparse
-from datetime import datetime, timezone
 import hashlib
 import json
 import os
 from pathlib import Path
 import platform
-import re
 import subprocess
 import tempfile
 import time
@@ -76,25 +74,9 @@ def check_operations():
                        cwd=ROOT, env=env, check=True, timeout=300)
 
 
-def env(name, pattern):
-    value = os.environ[name]
-    if not re.fullmatch(pattern, value):
-        raise ValueError('Invalid CI input: ' + name)
-    return value
-
-
-def metadata():
-    commit = env('GITHUB_SHA', r'[a-f0-9]{40}')
-    repo = env('GITHUB_REPOSITORY', r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+')
-    owner = env('DOCKERHUB_USERNAME', r'[a-z0-9][a-z0-9_-]*')
-    number = env('GITHUB_RUN_NUMBER', r'[0-9]+')
-    attempt = env('GITHUB_RUN_ATTEMPT', r'[0-9]+')
-    return commit, repo, owner, f'build-{number}-{commit[:12]}-{attempt}'
-
-
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('command', choices=['check', 'build', 'push-platform', 'publish'])
+    parser.add_argument('command', choices=['check', 'build'])
     args = parser.parse_args()
     contract = json.loads((ROOT / 'ci/images.json').read_text())['services']
     arch = {'x86_64': 'amd64', 'aarch64': 'arm64'}[platform.machine()]
@@ -112,41 +94,6 @@ def main():
         if args.command == 'check' and 'athenaeum' in contract:
             check_operations()
         return
-    commit, repository, owner, version = metadata()
-    if args.command == 'push-platform':
-        for service, c in contract.items():
-            tag = f'docker.io/{owner}/{c["image_name"]}:{version}-{arch}'
-            run('docker', 'tag', 'athenaeum-ci-' + service + ':local', tag)
-            run('docker', 'push', tag)
-        return
-    ready = []
-    for service, c in contract.items():
-        image = f'docker.io/{owner}/{c["image_name"]}'
-        sources = []
-        for target in ('amd64', 'arm64'):
-            data = json.loads(run('docker', 'buildx', 'imagetools', 'inspect', f'{image}:{version}-{target}',
-                                  '--format', '{{json .Manifest}}', capture=True))
-            assert re.fullmatch(r'sha256:[a-f0-9]{64}', data['digest'])
-            sources.append(image + '@' + data['digest'])
-        annotations = {
-            'org.opencontainers.image.source': 'https://github.com/' + repository,
-            'org.opencontainers.image.revision': commit,
-            'org.opencontainers.image.version': version,
-            'org.opencontainers.image.created': datetime.now(timezone.utc).isoformat(),
-            'io.valentemath.style': c['style_version'], 'io.valentemath.schema': str(c['schema_version']),
-        }
-        options = [arg for key, value in annotations.items() for arg in ('--annotation', 'index:' + key + '=' + value)]
-        run('docker', 'buildx', 'imagetools', 'create', '--tag', image + ':' + version, *options, *sources)
-        data = json.loads(run('docker', 'buildx', 'imagetools', 'inspect', image + ':' + version,
-                              '--format', '{{json .Manifest}}', capture=True))
-        platforms = {(m.get('platform', {}).get('os'), m.get('platform', {}).get('architecture')) for m in data['manifests']}
-        assert {('linux', 'amd64'), ('linux', 'arm64')} <= platforms, 'Both native manifests required'
-        assert re.fullmatch(r'sha256:[a-f0-9]{64}', data['digest'])
-        ready.append((image, data['digest']))
-    # Publish :latest only after all builds/tests/index checks succeed.
-    for image, digest in ready:
-        run('docker', 'buildx', 'imagetools', 'create', '--tag', image + ':latest',
-            '--tag', image + ':sha-' + commit, image + '@' + digest)
 
 
 if __name__ == '__main__':

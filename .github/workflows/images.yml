@@ -1,4 +1,4 @@
-name: Build and publish images
+name: Test and deploy
 on:
   pull_request:
   push:
@@ -24,36 +24,20 @@ jobs:
         with:
           version: v0.37.0
           driver-opts: image=moby/buildkit@sha256:28a898719c18a33f4e8000685287fa36fd0dd9560c6440227d3a732d79bb41d8
-      - name: Test native images without publishing credentials
+      - name: Test native images
         run: python3 ci/images.py check
-      - if: github.event_name == 'push' && vars.ENABLE_PUBLICATION == 'true'
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
-        with:
-          username: ${{ vars.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Publish unique native tags
-        if: github.event_name == 'push' && vars.ENABLE_PUBLICATION == 'true'
-        env:
-          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
-        run: python3 ci/images.py push-platform
-  publish:
+  deploy:
     needs: check
-    if: github.event_name == 'push' && vars.ENABLE_PUBLICATION == 'true'
+    if: github.event_name == 'push' && vars.ENABLE_DEPLOYMENT == 'true'
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
-        with:
-          version: v0.37.0
-          driver-opts: image=moby/buildkit@sha256:28a898719c18a33f4e8000685287fa36fd0dd9560c6440227d3a732d79bb41d8
-      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
-        with:
-          username: ${{ vars.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Publish verified AMD64 and ARM64 indexes
+      - name: Request a local VM build of the tested commit
         env:
-          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
-        run: python3 ci/images.py publish
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: python3 ci/deploy.py

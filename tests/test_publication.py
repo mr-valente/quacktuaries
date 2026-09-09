@@ -1,52 +1,37 @@
-"""Only fully checked native indexes may advance the deployment tag."""
-import json
+"""CI builds without a registry and sends only tested source to restricted SSH."""
 import os
 from pathlib import Path
 import runpy
-import sys
 import unittest
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-class PublicationTests(unittest.TestCase):
-    def exercise(self, fail=False):
-        namespace = runpy.run_path(str(ROOT / 'ci/images.py'))
-        calls = []
-        def execute(*args, **kwargs):
-            calls.append(tuple(map(str, args)))
-            if args[:4] == ('docker', 'buildx', 'imagetools', 'inspect'):
-                if fail: raise RuntimeError('Registry missing manifest')
-                return json.dumps({'digest': 'sha256:' + 'a' * 64, 'manifests': [
-                    {'platform': {'os': 'linux', 'architecture': a}} for a in ('amd64', 'arm64')]}).encode()
-            return b''
-        environment = {'GITHUB_SHA': 'a' * 40, 'GITHUB_REPOSITORY': 'fixture/' + ROOT.name,
-                       'DOCKERHUB_USERNAME': 'fixture', 'GITHUB_RUN_NUMBER': '12', 'GITHUB_RUN_ATTEMPT': '1'}
-        with patch.dict(os.environ, environment), patch.object(sys, 'argv', ['images.py', 'publish']), \
-             patch.dict(namespace['main'].__globals__, {'run': execute}):
-            if fail:
-                with self.assertRaisesRegex(RuntimeError, 'Registry'): namespace['main']()
-            else:
-                namespace['main']()
-        return calls
+class DeploymentRequestTests(unittest.TestCase):
+    def test_request_pins_host_key_and_sends_only_repo_and_commit(self):
+        main = runpy.run_path(str(ROOT / 'ci/deploy.py'))['main']
+        env = {'GITHUB_SHA': 'a'*40, 'GITHUB_REPOSITORY': 'fixture/app', 'DEPLOY_HOST': 'vm.example.test',
+               'DEPLOY_SSH_KEY': 'synthetic-key', 'DEPLOY_KNOWN_HOSTS': 'synthetic-host-key'}
+        def execute(args, **kwargs):
+            self.assertIn('StrictHostKeyChecking=yes', args)
+            self.assertIn('BatchMode=yes', args)
+            self.assertEqual(kwargs['input'], ('fixture/app ' + 'a'*40 + '\n').encode())
+            key = Path(args[args.index('-i') + 1])
+            self.assertEqual(key.stat().st_mode & 0o777, 0o600)
+            return None
+        with patch.dict(os.environ, env), patch('subprocess.run', side_effect=execute) as run:
+            main()
+            self.assertEqual(run.call_count, 1)
+        self.assertFalse(any('docker' in str(c) for c in run.call_args_list))
 
-    def test_latest_is_published_last_from_verified_digests(self):
-        calls = self.exercise()
-        latest = [i for i,c in enumerate(calls) if any(a.endswith(':latest') for a in c)]
-        inspections = [i for i,c in enumerate(calls) if c[:4] == ('docker', 'buildx', 'imagetools', 'inspect')]
-        self.assertTrue(latest)
-        self.assertGreater(min(latest), max(inspections))
-        for i in latest:
-            self.assertIn('@sha256:', calls[i][-1])
-        annotations = [a for c in calls for a in c if a.startswith('index:')]
-        self.assertIn('index:io.valentemath.schema=0', annotations)
-        self.assertIn('index:org.opencontainers.image.revision=' + 'a'*40, annotations)
-        self.assertFalse(any(c[0] == 'gh' for c in calls))
-
-    def test_registry_failure_never_advances_latest(self):
-        calls = self.exercise(fail=True)
-        self.assertFalse(any(a.endswith(':latest') for c in calls for a in c))
+    def test_bad_request_never_opens_ssh(self):
+        main = runpy.run_path(str(ROOT / 'ci/deploy.py'))['main']
+        for key, bad in [('GITHUB_SHA', 'main; id'), ('GITHUB_REPOSITORY', '../other'), ('DEPLOY_HOST', '-oProxyCommand=id')]:
+            env = {'GITHUB_SHA': 'a'*40, 'GITHUB_REPOSITORY': 'fixture/app', 'DEPLOY_HOST': 'vm.example.test', key: bad}
+            with self.subTest(key=key), patch.dict(os.environ, env), patch('subprocess.run') as run:
+                with self.assertRaises(ValueError): main()
+                run.assert_not_called()
 
 
 if __name__ == '__main__': unittest.main()
