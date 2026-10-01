@@ -5,6 +5,7 @@ from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session as DBSession
 
+from app import ecosystem
 from app.database import get_db
 from app.models import Session, Player
 from app.game import (
@@ -27,12 +28,14 @@ router = APIRouter()
 
 def _get_player(request: Request, session_id: str, db: DBSession):
     """Retrieve the current player from the session cookie."""
-    player_id = request.session.get("player_id")
-    if not player_id:
-        return None, None
-    player = db.query(Player).filter_by(id=player_id, session_id=session_id).first()
-    if not player:
-        return None, None
+    player = ecosystem.owned(request, db, "player", Player, session_id)
+    if player:
+        ecosystem.remember_binding(request)
+    else:
+        player_id = request.session.get("player_id")
+        player = db.query(Player).filter_by(id=player_id, session_id=session_id).first() if player_id else None
+        if not ecosystem.permitted(request, db, "player", player):
+            return None, None
     session = db.query(Session).filter_by(id=session_id).first()
     return player, session
 

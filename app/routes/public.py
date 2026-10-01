@@ -9,6 +9,8 @@ from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session as DBSession
 
+from app import ecosystem
+from app.routes.student import _get_player
 from app.database import get_db
 from app.models import Session, Player
 from app.game import get_leaderboard
@@ -92,14 +94,16 @@ def join_session(
         )
 
     # Check if player already exists (by name in this session)
-    existing = db.query(Player).filter_by(session_id=session.id, name=player_name).first()
+    linked = ecosystem.owned(request, db, "player", Player, session.id)
+    existing = linked or db.query(Player).filter_by(session_id=session.id, name=player_name).first()
     if existing:
         # Re-join: verify the rejoin token from the cookie
         cookie_token = request.session.get("rejoin_token")
-        if cookie_token != existing.rejoin_token:
+        if not linked and (cookie_token != existing.rejoin_token or not ecosystem.permitted(request, db, "player", existing)):
             return templates.TemplateResponse(request=request, name="join.html", context={"request": request, "error": "That name is already taken in this session."},
                 status_code=400,
             )
+        ecosystem.remember_binding(request)
         request.session["player_id"] = existing.id
         request.session["session_id"] = session.id
         return RedirectResponse(url=request.url_for("student_dashboard", session_id=session.id), status_code=303)
@@ -113,6 +117,8 @@ def join_session(
     rejoin_token = secrets.token_hex(16)
     player = Player(session_id=session.id, name=player_name, rejoin_token=rejoin_token)
     db.add(player)
+    db.flush()
+    ecosystem.bind(request, db, "player", player)
     db.commit()
     db.refresh(player)
 
@@ -135,18 +141,13 @@ def session_state(
         return {"error": "Session not found."}
 
     leaderboard = get_leaderboard(db, session_id)
-    player_id = request.session.get("player_id")
+    player, _ = _get_player(request, session_id, db)
     player_state = None
-    if player_id:
-        player = db.query(Player).filter_by(id=player_id, session_id=session_id).first()
-        if player:
-            player_state = {
-                "id": player.id,
-                "name": player.name,
-                "score": player.score,
-                "turns_used": player.turns_used,
-                "budget_used": player.budget_used,
-            }
+    if player:
+        player_state = {
+            "id": player.id, "name": player.name, "score": player.score,
+            "turns_used": player.turns_used, "budget_used": player.budget_used,
+        }
 
     return {
         "session_id": session.id,

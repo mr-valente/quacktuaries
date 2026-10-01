@@ -21,6 +21,7 @@ from app.config import (
     DEFAULT_REQUIRE_PRIOR_TEST,
     DEFAULT_TIME_LIMIT_MINUTES,
 )
+from app import ecosystem
 from app.database import get_db
 from app.models import Session, Player, Event, Teacher
 from app.game import (
@@ -38,15 +39,20 @@ router = APIRouter(prefix="/admin")
 
 def _get_teacher(request: Request, db: DBSession):
     """Return the current Teacher from the session cookie, or None."""
+    linked = ecosystem.owned(request, db, "teacher", Teacher)
+    if linked:
+        ecosystem.remember_binding(request)
+        return linked
     teacher_id = request.session.get("teacher_id")
     if not teacher_id:
         return None
-    return db.query(Teacher).filter_by(id=teacher_id).first()
+    teacher = db.query(Teacher).filter_by(id=teacher_id).first()
+    return teacher if ecosystem.permitted(request, db, "teacher", teacher) else None
 
 
 def _require_own_session(teacher: Teacher, session: Session) -> bool:
     """Check that the teacher owns the given session."""
-    return teacher is not None and session is not None and session.teacher_id == teacher.id
+    return teacher is not None and session is not None and session.teacher_id in getattr(teacher, "ecosystem_teacher_ids", [teacher.id])
 
 
 # ── Login ──────────────────────────────────────────────────────────────────────
@@ -69,11 +75,15 @@ def admin_login(request: Request, teacher_name: str = Form(...), db: DBSession =
         )
 
     # Check if a teacher with this name already exists
+    linked = ecosystem.owned(request, db, "teacher", Teacher)
+    if linked:
+        ecosystem.remember_binding(request)
+        return RedirectResponse(url=request.url_for("admin_dashboard"), status_code=303)
     existing = db.query(Teacher).filter_by(name=teacher_name).first()
     if existing:
         # Re-login: verify the rejoin token from the cookie
         cookie_token = request.session.get("teacher_rejoin_token")
-        if cookie_token != existing.rejoin_token:
+        if cookie_token != existing.rejoin_token or not ecosystem.permitted(request, db, "teacher", existing):
             return templates.TemplateResponse(request=request, name="admin_login.html", context={"request": request, "error": "That teacher name is already taken."},
                 status_code=400,
             )
@@ -83,6 +93,8 @@ def admin_login(request: Request, teacher_name: str = Form(...), db: DBSession =
     rejoin_token = secrets.token_hex(16)
     teacher = Teacher(name=teacher_name, rejoin_token=rejoin_token)
     db.add(teacher)
+    db.flush()
+    ecosystem.bind(request, db, "teacher", teacher)
     db.commit()
     db.refresh(teacher)
 
@@ -93,6 +105,8 @@ def admin_login(request: Request, teacher_name: str = Form(...), db: DBSession =
 
 @router.get("/logout")
 def admin_logout(request: Request):
+    if ecosystem.account(request):
+        return RedirectResponse("/account/", status_code=303)
     request.session.pop("teacher_id", None)
     return RedirectResponse(url=request.url_for("home"), status_code=303)
 
@@ -106,7 +120,7 @@ def admin_dashboard(request: Request, db: DBSession = Depends(get_db)):
         return RedirectResponse(url=request.url_for("admin_login_page"), status_code=303)
     sessions = (
         db.query(Session)
-        .filter_by(teacher_id=teacher.id)
+        .filter(Session.teacher_id.in_(getattr(teacher, "ecosystem_teacher_ids", [teacher.id])))
         .order_by(Session.created_at.desc())
         .all()
     )

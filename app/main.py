@@ -1,6 +1,11 @@
 """FastAPI application entry-point."""
 
 import os
+import asyncio
+from app import ecosystem
+from app.performance import snapshots
+
+ecosystem.install(snapshots)
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
@@ -15,11 +20,21 @@ from app.operations import UpdateGate
 @asynccontextmanager
 async def lifespan(app):
     init_db()
-    yield
+    stop = asyncio.Event()
+    worker = asyncio.create_task(ecosystem.sync_worker(stop))
+    try:
+        yield
+    finally:
+        stop.set()
+        await worker
 
 
 app = FastAPI(title="Quacktuaries", docs_url=None, redoc_url=None,
               openapi_url=None, root_path=ROOT_PATH, lifespan=lifespan)
+
+# Shared identity resolves once per request; app cookies still own classroom seats.
+app.add_middleware(ecosystem.AccountMiddleware)
+app.include_router(ecosystem.router)
 
 # Signed-cookie sessions
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, max_age=86400 * 7,

@@ -1,6 +1,6 @@
 # Athenaeum deployment contract
 
-Service: `quacktuaries`. Public path: `/quacktuaries/`. Internal port: `8000`. One application process and one SQLite database. The app stays awake; there are no independent background jobs. Timer polling checks game time when a request arrives.
+Service: `quacktuaries`. Public path: `/quacktuaries/`. Internal port: `8000`. One application process and one SQLite database. Hosted deployments may sleep when idle; shared-account synchronization runs while awake. Timer polling checks game time when a request arrives.
 
 ## Runtime
 
@@ -25,11 +25,11 @@ The image runs as UID/GID `10001:10001`, supports a read-only root filesystem, a
 
 ## Data and health
 
-Mount `/srv/athenaeum/apps/quacktuaries/data/` at `/data`, owned by the runtime UID/GID. Production startup refuses to create a missing parent directory. An explicitly prepared empty directory initializes the existing schema. There are no schema changes in this integration.
+Mount `/srv/athenaeum/apps/quacktuaries/data/` at `/data`, owned by the runtime UID/GID. Production startup refuses to create a missing parent directory. An explicitly prepared empty directory initializes the existing schema. Shared accounts add the link and outbox tables described below; existing classroom columns are unchanged.
 
 `GET /_health` returns 200 with `{"status":"ok"}` only if a read-only SQLite connection can read the required tables; otherwise 503 with a generic status. It does not create a database or advance gameplay. Caddy keeps this app probe internal. Compose's missing-bind-directory check is not a filesystem UUID/mount check; Athenaeum now supplies the host guard, which must be installed and verified on Oracle before deployment.
 
-The database owns teachers, sessions, players, device statistics, and events. There are no uploads. Consistent full backups must use SQLite's supported backup API and preserve the signing key in encrypted recovery material. Do not copy the live database file periodically; CSV game exports do not restore ownership or complete game state. Athenaeum's Phase D tools provide encrypted snapshots and isolated restore tests; configuration and host activation are documented in that repository's `docs/recovery.md`.
+The database owns teachers, sessions, players, device statistics, and events. There are no uploads. Consistent full backups must use SQLite's supported backup API and preserve the signing key in encrypted recovery material. Do not copy the live database file periodically; CSV game exports do not restore ownership or complete game state. Athenaeum provides encrypted snapshots and isolated restore tests; see its `docs/guides/5-backup-and-recovery.md`.
 
 The existing Cloud Run deployment is untouched. Changing its image could discard ephemeral data; do not deploy this integration there as a migration shortcut. The cookie name changes from the old generic `session` cookie. Preserve data and plan existing-browser ownership/rejoin behavior during the separate cutover phase.
 
@@ -73,6 +73,36 @@ The hosted variant requires a session secret at runtime. Standalone production d
 
 Release `docker/compose.yaml` builds ARM64 for Oracle; set `QUACKTUARIES_PLATFORM=linux/amd64` only when publishing for an AMD64 host. These are single-architecture tags. On AMD64, ARM builds need registered QEMU/binfmt emulation. Add `--no-push --version v0.1.0` for a local build check without publication or version-state changes.
 
-Athenaeum pulls `valentemath/quacktuaries:latest-athenaeum` and updates manually over SSH. Its `ops/runbook/stack update` takes a verified encrypted backup before replacing containers. Schedule updates outside active classes; there is no automatic updater or class-activity gate. Pin a retained image only when compatible with the current database. See Athenaeum's `docs/delivery.md` and Part 2 runbook for publication, deployment and recovery checkpoints.
+Athenaeum pulls `valentemath/quacktuaries:latest-athenaeum` and updates manually over SSH. Its `ops/runbook/stack update` takes a verified encrypted backup before replacing containers. Schedule updates outside active classes; there is no automatic updater or class-activity gate. Pin a retained image only when compatible with the current database. See Athenaeum's `docs/development/image-builds.md` and `docs/guides/3-daily-usage.md` for publication and deployment.
 
 The app's optional private `python -m app.operations status|drain|release` CLI remains available, but the manual runbook does not call it. Existing Cloud Run deployment triggers must be disabled separately before a source push intended solely for Oracle; preserve live records before the eventual cutover.
+
+## Shared Athenaeum accounts
+
+The hosted stack supplies `ACCOUNT_SERVICE_URL=http://accounts:8000` and
+`ATHENAEUM_APP_ID=quacktuaries`. The adapter derives its private API credential from
+the existing per-app session key; never expose that credential to the browser.
+A standalone image omits these settings and keeps the name-and-join-code flow.
+
+On startup, SQLAlchemy creates the additive `ecosystem_links` and
+`ecosystem_outbox` tables. Existing teachers, players, games and tokens are
+preserved. Back up the database before deploying. Older images ignore these
+tables; retained results and pending deliveries stay on disk when rolling back.
+
+Google-linked players and teachers recover their seats from the shared account
+on another browser. Original guest records need an explicit save from a browser
+with their rejoin token. Classroom display names do not establish ownership.
+Shared sign-out is available through the account overview. Existing unlinked
+guest seats remain browser-based.
+
+The outbox is written in the classroom transaction. A background worker retries
+every 15 seconds while awake and reconciles finalized records on startup. Sleep
+retains pending rows until the next wake. The app account page reports pending
+records. An outage retains access only to an established seat with the same
+shared cookie and a signed browser binding; fresh or switched identities need
+service validation. Google sign-out during an outage is enforced when identity
+validation resumes.
+
+The pinned adapter lives in `app/ecosystem.py`; its source and integration
+contract are in the Athenaeum repository under `accounts/client/` and
+`docs/reference/accounts.md`. Update the copies together.
