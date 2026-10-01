@@ -1,0 +1,24 @@
+# Release builds only; ../docker-compose.yml is standalone local development.
+# Like Tailgate, one build publishes two image lines at the same app version:
+#   build quacktuaries -> latest / VERSION and latest-athenaeum / VERSION-athenaeum
+# Both share the runtime layers; only hosting defaults differ between targets.
+name: quacktuaries-build
+services:
+  standalone:
+    image: valentemath/quacktuaries:latest
+    platform: ${QUACKTUARIES_PLATFORM:-linux/arm64}
+    pull_policy: build
+    build:
+      context: ..
+      target: standalone
+      args:
+        QUACKTUARIES_VERSION: ${QUACKTUARIES_VERSION:-dev}
+  athenaeum:
+    image: valentemath/quacktuaries:latest-athenaeum
+    platform: ${QUACKTUARIES_PLATFORM:-linux/arm64}
+    pull_policy: build
+    build:
+      context: ..
+      target: athenaeum
+      args:
+        QUACKTUARIES_VERSION: ${QUACKTUARIES_VERSION:-dev}

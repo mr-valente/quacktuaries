@@ -14,12 +14,12 @@ ROOT_PATH=/quacktuaries
 PORT=8000
 DB_PATH=/data/app.db
 SESSION_SECRET_FILE=/run/secrets/quacktuaries_session
-FORWARDED_ALLOW_IPS=<edge IP on the dedicated Docker network>
+FORWARDED_ALLOW_IPS=*
 ```
 
 Use a protected secret file containing a random key of at least 32 characters. Alternatively set `SESSION_SECRET`, but never both. Missing/short production keys fail startup. The image has no embedded development key. Preserve the secret across replacement: changing it invalidates existing sessions and name-based rejoin ownership.
 
-The cookie is `quacktuaries_session`, scoped to the configured prefix (or `/` standalone), host-only, HttpOnly, SameSite=Lax, and Secure in production. The application does not accept sibling `session` cookies. Do not set wildcard proxy trust; Athenaeum supplies Caddy's fixed private IP. Do not publish application ports in production.
+The cookie is `quacktuaries_session`, scoped to the configured prefix (or `/` standalone), host-only, HttpOnly, SameSite=Lax, and Secure in production. The application does not accept sibling `session` cookies. Athenaeum trusts proxy headers on its private apps network, whose services are trusted peers. That wildcard is supplied by Athenaeum's Compose file, not embedded in the image; standalone deployments should allow only their own trusted proxies. Do not publish application ports in production.
 
 The image runs as UID/GID `10001:10001`, supports a read-only root filesystem, and writes only to `/data` and temporary scratch space. `PORT` is honored by the entry point; the image healthcheck targets the ecosystem's fixed port 8000. Override that check if changing the container port. No root privileges, Docker socket, or cloud credentials are needed.
 
@@ -51,10 +51,28 @@ The tests launch real Uvicorn against disposable databases. Athenaeum's separate
 
 Shared-style version: not adopted yet. The existing appearance remains during Phase C; Athenaeum's `style.md` defines the eventual shared design. The existing guide still loads pinned KaTeX CDN resources. Shared styling and asset packaging are a later phase.
 
-## Phase E delivery
+## Manual image delivery
 
-`.github/workflows/images.yml` tests native AMD64/ARM64 images and publishes Docker Hub `:latest` only after both pass. Configure `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, and `ENABLE_PUBLICATION`; see Athenaeum's `docs/delivery.md`. There are no GitHub release assets. `ci/images.json` declares the image name, shared style, and schema version (currently 0). The host checks every 15 minutes and deploys a fixed digest. Schema-changing releases require a maintenance task. The publisher is kept identical in both repositories.
+The shared Fish `~/.config/builder/builds.yaml` owns an independent `quacktuaries` entry and SemVer counter. From your normal local Fish shell:
 
-`python -m app.operations status|drain|release` is a private container CLI, with no HTTP route. It exposes only schema, hold, and active-class booleans. Every lobby or non-ended session blocks updates. The request middleware holds a shared lock through each response; drain obtains the exclusive lock before checking activity and placing a transient maintenance hold. Held public requests return 503/Retry-After, while health remains available. This closes the race where a class starts during a download or an in-flight request. The hold lives in container-local `/tmp`, not persistent app data.
+```fish
+build --dry-run --version v0.1.0 quacktuaries
+build --version v0.1.0 quacktuaries
+# Later releases increment only Quacktuaries' version:
+build quacktuaries
+```
 
-The host requires a verified encrypted backup before Quacktuaries replacement and defers for classes; it never restores an old database automatically to make image rollback succeed. Real-server tests cover lobby/active deferral, maintenance responses, and an admitted request completing before the drain decision. Cloud Run and final shared styling remain unchanged by this local work.
+Like Tailgate, one command builds and publishes both output lines at one version:
+
+| Variant | Moving tag | Retained version example | Defaults |
+| --- | --- | --- | --- |
+| Standalone | `valentemath/quacktuaries:latest` | `valentemath/quacktuaries:v0.1.0` | Root path, development mode |
+| Athenaeum | `valentemath/quacktuaries:latest-athenaeum` | `valentemath/quacktuaries:v0.1.0-athenaeum` | `/quacktuaries`, production mode |
+
+The hosted variant requires a session secret at runtime. Standalone production deployments must also set `APP_ENV=production` and supply a persistent secret. Neither recipe depends on an Athenaeum checkout. A plain `docker build .` still selects the standalone target; `docker-compose.yml` remains for local development.
+
+Release `docker/compose.yaml` builds ARM64 for Oracle; set `QUACKTUARIES_PLATFORM=linux/amd64` only when publishing for an AMD64 host. These are single-architecture tags. On AMD64, ARM builds need registered QEMU/binfmt emulation. Add `--no-push --version v0.1.0` for a local build check without publication or version-state changes.
+
+Athenaeum pulls `valentemath/quacktuaries:latest-athenaeum` and updates manually over SSH. Its `ops/runbook/stack update` takes a verified encrypted backup before replacing containers. Schedule updates outside active classes; there is no automatic updater or class-activity gate. Pin a retained image only when compatible with the current database. See Athenaeum's `docs/delivery.md` and Part 2 runbook for publication, deployment and recovery checkpoints.
+
+The app's optional private `python -m app.operations status|drain|release` CLI remains available, but the manual runbook does not call it. Existing Cloud Run deployment triggers must be disabled separately before a source push intended solely for Oracle; preserve live records before the eventual cutover.
