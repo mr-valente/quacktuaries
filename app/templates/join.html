@@ -20,7 +20,8 @@
       <div class="form-group">
         <label for="player_name">Your Name</label>
         <input type="text" id="player_name" name="player_name" class="form-control"
-               placeholder="Enter your name" maxlength="40" required>
+               {% if request.state.ecosystem_account and request.state.ecosystem_account.kind == 'google' %}value="{{ request.state.ecosystem_account.name }}" readonly{% endif %}
+               placeholder="Enter your name" maxlength="60" required>
       </div>
       <button type="submit" class="btn btn-primary" style="width:100%;">Join Game</button>
     </form>

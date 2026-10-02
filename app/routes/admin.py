@@ -67,27 +67,23 @@ def admin_login_page(request: Request, db: DBSession = Depends(get_db)):
 
 
 @router.post("/login")
-def admin_login(request: Request, teacher_name: str = Form(...), db: DBSession = Depends(get_db)):
-    teacher_name = teacher_name.strip()
+def admin_login(request: Request, teacher_name: str = Form(''), db: DBSession = Depends(get_db)):
+    teacher_name = ecosystem.display_name(request, ' '.join(teacher_name.split())[:60])
     if not teacher_name:
         return templates.TemplateResponse(request=request, name="admin_login.html", context={"request": request, "error": "Please enter your name."},
             status_code=400,
         )
 
-    # Check if a teacher with this name already exists
+    ecosystem.lock_profiles(db)
     linked = ecosystem.owned(request, db, "teacher", Teacher)
     if linked:
         ecosystem.remember_binding(request)
         return RedirectResponse(url=request.url_for("admin_dashboard"), status_code=303)
-    existing = db.query(Teacher).filter_by(name=teacher_name).first()
-    if existing:
-        # Re-login: verify the rejoin token from the cookie
-        cookie_token = request.session.get("teacher_rejoin_token")
-        if cookie_token != existing.rejoin_token or not ecosystem.permitted(request, db, "teacher", existing):
-            return templates.TemplateResponse(request=request, name="admin_login.html", context={"request": request, "error": "That teacher name is already taken."},
-                status_code=400,
-            )
-        request.session["teacher_id"] = existing.id
+    existing = db.get(Teacher, request.session.get("teacher_id", ""))
+    if (existing and request.session.get("teacher_rejoin_token") == existing.rejoin_token
+            and ecosystem.permitted(request, db, "teacher", existing)):
+        existing.name = teacher_name
+        db.commit()
         return RedirectResponse(url=request.url_for("admin_dashboard"), status_code=303)
 
     rejoin_token = secrets.token_hex(16)

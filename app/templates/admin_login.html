@@ -6,7 +6,7 @@
   <div class="card">
     <h2>👩‍🏫 Teacher Setup</h2>
     <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:1rem;">
-      Enter your name to create or resume your teacher dashboard.
+      Continue to your teacher dashboard.
     </p>
 
     {% if error %}
@@ -17,7 +17,8 @@
       <div class="form-group">
         <label for="teacher_name">Your Name</label>
         <input type="text" id="teacher_name" name="teacher_name" class="form-control"
-               placeholder="e.g. Professor Duck" required>
+               {% if request.state.ecosystem_account and request.state.ecosystem_account.kind == 'google' %}value="{{ request.state.ecosystem_account.name }}" readonly{% endif %}
+               placeholder="e.g. Professor Duck" maxlength="60" required>
       </div>
       <button type="submit" class="btn btn-warning" style="width:100%;">Continue as Teacher</button>
     </form>

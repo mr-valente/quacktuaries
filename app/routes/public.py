@@ -71,17 +71,18 @@ def join_form(request: Request):
 def join_session(
     request: Request,
     join_code: str = Form(...),
-    player_name: str = Form(...),
+    player_name: str = Form(''),
     db: DBSession = Depends(get_db),
 ):
     join_code = join_code.strip().upper()
-    player_name = player_name.strip()
+    player_name = ecosystem.display_name(request, ' '.join(player_name.split())[:60])
 
     if not player_name:
         return templates.TemplateResponse(request=request, name="join.html", context={"request": request, "error": "Please enter your name."},
             status_code=400,
         )
 
+    ecosystem.lock_profiles(db)
     session = db.query(Session).filter_by(join_code=join_code).first()
     if session is None:
         return templates.TemplateResponse(request=request, name="join.html", context={"request": request, "error": f"No session found with code '{join_code}'."},
@@ -93,19 +94,25 @@ def join_session(
             status_code=400,
         )
 
-    # Check if player already exists (by name in this session)
+    user = ecosystem.account(request)
+    persistent = user and user['kind'] == 'google'
     linked = ecosystem.owned(request, db, "player", Player, session.id)
-    existing = linked or db.query(Player).filter_by(session_id=session.id, name=player_name).first()
+    browser_player = db.get(Player, request.session.get("player_id", ""))
+    if not (browser_player and browser_player.session_id == session.id
+            and request.session.get("rejoin_token") == browser_player.rejoin_token
+            and ecosystem.permitted(request, db, "player", browser_player)):
+        browser_player = None
+    existing = linked or browser_player
+    if not persistent and db.query(Player).filter_by(session_id=session.id, name=player_name).filter(
+            Player.id != (existing.id if existing else '')).first():
+        return templates.TemplateResponse(request=request, name="join.html", context={"request": request, "error": "That name is already taken in this session. Try adding an initial."}, status_code=400)
     if existing:
-        # Re-join: verify the rejoin token from the cookie
-        cookie_token = request.session.get("rejoin_token")
-        if not linked and (cookie_token != existing.rejoin_token or not ecosystem.permitted(request, db, "player", existing)):
-            return templates.TemplateResponse(request=request, name="join.html", context={"request": request, "error": "That name is already taken in this session."},
-                status_code=400,
-            )
+        existing.name = player_name
+        db.commit()
         ecosystem.remember_binding(request)
         request.session["player_id"] = existing.id
         request.session["session_id"] = session.id
+        request.session["rejoin_token"] = existing.rejoin_token
         return RedirectResponse(url=request.url_for("student_dashboard", session_id=session.id), status_code=303)
 
     # Block new player creation if the session is locked

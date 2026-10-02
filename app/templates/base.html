@@ -240,8 +240,7 @@
     <a href="{{ request.url_for('home') }}" class="navbar-brand">🦆 Quacktuaries</a>
     <div class="navbar-links">
       {% if request.state.ecosystem_enabled %}
-      <a href="/account/?return_to={{ request.url_for('home').path|urlencode }}">{{ request.state.ecosystem_account.name if request.state.ecosystem_account else 'Login' }}</a>
-      <a href="{{ request.url_for('app_account') }}">Save activity</a>
+      <a href="{{ request.url_for('app_account') }}">{{ 'Account' if request.state.ecosystem_account else 'Login' }}</a>
       {% endif %}
       {% block nav_links %}
         <a href="{{ request.url_for('home') }}">Home</a>

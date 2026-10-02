@@ -17,7 +17,7 @@ SESSION_SECRET_FILE=/run/secrets/quacktuaries_session
 FORWARDED_ALLOW_IPS=*
 ```
 
-Use a protected secret file containing a random key of at least 32 characters. Alternatively set `SESSION_SECRET`, but never both. Missing/short production keys fail startup. The image has no embedded development key. Preserve the secret across replacement: changing it invalidates existing sessions and name-based rejoin ownership.
+Use a protected secret file containing a random key of at least 32 characters. Alternatively set `SESSION_SECRET`, but never both. Missing/short production keys fail startup. The image has no embedded development key. Preserve the secret across replacement: changing it invalidates existing sessions and browser rejoin ownership.
 
 The cookie is `quacktuaries_session`, scoped to the configured prefix (or `/` standalone), host-only, HttpOnly, SameSite=Lax, and Secure in production. The application does not accept sibling `session` cookies. Athenaeum trusts proxy headers on its private apps network, whose services are trusted peers. That wildcard is supplied by Athenaeum's Compose file, not embedded in the image; standalone deployments should allow only their own trusted proxies. Do not publish application ports in production.
 
@@ -91,7 +91,7 @@ tables; retained results and pending deliveries stay on disk when rolling back.
 
 Google-linked players and teachers recover their seats from the shared account
 on another browser. Original guest records need an explicit save from a browser
-with their rejoin token. Classroom display names do not establish ownership.
+with their rejoin token. Classroom display names do not establish ownership. Teachers may reuse names without opening another teacher's dashboard. Signed-in users use their saved account display name, can share names, and recover the same player seat per classroom across devices. Guest player names remain protected within a classroom; the same browser rejoins its existing seat. The header has one Login/Account link to the app account page.
 Shared sign-out is available through the account overview. Existing unlinked
 guest seats remain browser-based.
 

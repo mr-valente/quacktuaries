@@ -5,7 +5,7 @@
 {% block nav_links %}
   <a href="{{ request.url_for('admin_dashboard') }}">Dashboard</a>
   <a href="{{ request.url_for('new_session_form') }}">+ New</a>
-  <a href="{{ request.url_for('admin_logout') }}">Logout</a>
+  {% if not request.state.ecosystem_account %}<a href="{{ request.url_for('admin_logout') }}">Logout</a>{% endif %}
   <span style="color:var(--text-muted);">|</span>
   <span style="color:var(--text-muted); font-size:0.85rem;">👩‍🏫 {{ teacher.name }}</span>
 {% endblock %}
