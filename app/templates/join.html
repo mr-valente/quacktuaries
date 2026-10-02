@@ -14,15 +14,18 @@
       <div class="form-group">
         <label for="join_code">Join Code</label>
         <input type="text" id="join_code" name="join_code" class="form-control"
-               placeholder="e.g. AB12CD" maxlength="6" required
+               placeholder="e.g. AB12CD" maxlength="6" required value="{{ code|default('') }}"
                style="text-transform: uppercase; letter-spacing: 0.1em; font-weight:600;">
       </div>
+    {% if request.state.ecosystem_account %}
+    <p>Joining as {{ request.state.ecosystem_account.name }} · <a href="/account/?return_to={{ request.url_for('join_form').path|urlencode }}%3Fcode%3D{{ code|default('')|urlencode }}">Change name</a></p>
+    {% else %}
       <div class="form-group">
         <label for="player_name">Your Name</label>
         <input type="text" id="player_name" name="player_name" class="form-control"
-               {% if request.state.ecosystem_account and request.state.ecosystem_account.kind == 'google' %}value="{{ request.state.ecosystem_account.name }}" readonly{% endif %}
-               placeholder="Enter your name" maxlength="60" required>
+                 placeholder="Enter your name" maxlength="60" required>
       </div>
+    {% endif %}
       <button type="submit" class="btn btn-primary" style="width:100%;">Join Game</button>
     </form>
   </div>

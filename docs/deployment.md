@@ -90,10 +90,22 @@ preserved. Back up the database before deploying. Older images ignore these
 tables; retained results and pending deliveries stay on disk when rolling back.
 
 Google-linked players and teachers recover their seats from the shared account
-on another browser. Original guest records need an explicit save from a browser
-with their rejoin token. Classroom display names do not establish ownership. Teachers may reuse names without opening another teacher's dashboard. Signed-in users use their saved account display name, can share names, and recover the same player seat per classroom across devices. Guest player names remain protected within a classroom; the same browser rejoins its existing seat. The header has one Login/Account link to the app account page.
-Shared sign-out is available through the account overview. Existing unlinked
-guest seats remain browser-based.
+on another browser. Saving original guest activity requires an explicit action
+from a browser with its rejoin token. Names never establish ownership.
+
+Hosted Join and Teacher Login first send anonymous users to the shared sign-in
+page, preserving the return path and join code. Google and named guest identities
+skip further name forms; teachers go directly to their dashboard. The shared
+guest cookie carries between apps and the website for seven days.
+
+Display name changes apply to teacher and player profiles without creating a
+new seat. Shared identities may reuse names and recover one player seat per
+classroom by account ID. Standalone guests keep local name forms, browser-proof
+recovery and player name collision checks. Existing unlinked guest seats remain
+browser-based.
+
+The header has one Login/Account link to the app account page. Shared sign-out
+and display name editing are available through the central account overview.
 
 The outbox is written in the classroom transaction. A background worker retries
 every 15 seconds while awake and reconciles finalized records on startup. Sleep

@@ -20,7 +20,7 @@
   <div class="card">
     <h3>🎓 Students</h3>
     <p style="color:var(--text-muted); margin-bottom:1rem;">
-      Get a <strong>join code</strong> from your teacher, enter your name, and start playing.
+      {% if request.state.ecosystem_enabled %}Sign in, then enter your teacher's <strong>join code</strong>.{% else %}Get a <strong>join code</strong> from your teacher, enter your name, and start playing.{% endif %}
       Inspect duck batches to gather data, then sell insurance policies based on your estimates.
     </p>
   </div>

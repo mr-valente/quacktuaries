@@ -60,6 +60,11 @@ def _require_own_session(teacher: Teacher, session: Session) -> bool:
 @router.get("", response_class=HTMLResponse)
 @router.get("/", response_class=HTMLResponse)
 def admin_login_page(request: Request, db: DBSession = Depends(get_db)):
+    if redirect := ecosystem.login_required(request):
+        return redirect
+    if ecosystem.account(request):
+        ecosystem.login_teacher(request, db, ecosystem.display_name(request))
+        return RedirectResponse(url=request.url_for('admin_dashboard'), status_code=303)
     teacher = _get_teacher(request, db)
     if teacher:
         return RedirectResponse(url=request.url_for("admin_dashboard"), status_code=303)
@@ -68,34 +73,15 @@ def admin_login_page(request: Request, db: DBSession = Depends(get_db)):
 
 @router.post("/login")
 def admin_login(request: Request, teacher_name: str = Form(''), db: DBSession = Depends(get_db)):
+    if redirect := ecosystem.login_required(request, request.url_for('admin_login_page').path):
+        return redirect
     teacher_name = ecosystem.display_name(request, ' '.join(teacher_name.split())[:60])
     if not teacher_name:
         return templates.TemplateResponse(request=request, name="admin_login.html", context={"request": request, "error": "Please enter your name."},
             status_code=400,
         )
 
-    ecosystem.lock_profiles(db)
-    linked = ecosystem.owned(request, db, "teacher", Teacher)
-    if linked:
-        ecosystem.remember_binding(request)
-        return RedirectResponse(url=request.url_for("admin_dashboard"), status_code=303)
-    existing = db.get(Teacher, request.session.get("teacher_id", ""))
-    if (existing and request.session.get("teacher_rejoin_token") == existing.rejoin_token
-            and ecosystem.permitted(request, db, "teacher", existing)):
-        existing.name = teacher_name
-        db.commit()
-        return RedirectResponse(url=request.url_for("admin_dashboard"), status_code=303)
-
-    rejoin_token = secrets.token_hex(16)
-    teacher = Teacher(name=teacher_name, rejoin_token=rejoin_token)
-    db.add(teacher)
-    db.flush()
-    ecosystem.bind(request, db, "teacher", teacher)
-    db.commit()
-    db.refresh(teacher)
-
-    request.session["teacher_id"] = teacher.id
-    request.session["teacher_rejoin_token"] = rejoin_token
+    ecosystem.login_teacher(request, db, teacher_name)
     return RedirectResponse(url=request.url_for("admin_dashboard"), status_code=303)
 
 

@@ -63,8 +63,10 @@ def student_guide(request: Request):
 
 
 @router.get("/join", response_class=HTMLResponse)
-def join_form(request: Request):
-    return templates.TemplateResponse(request=request, name="join.html", context={"request": request, "error": None})
+def join_form(request: Request, code: str = ''):
+    if redirect := ecosystem.login_required(request):
+        return redirect
+    return templates.TemplateResponse(request=request, name="join.html", context={"request": request, "error": None, "code": code.upper()[:6]})
 
 
 @router.post("/session/join")
@@ -75,27 +77,29 @@ def join_session(
     db: DBSession = Depends(get_db),
 ):
     join_code = join_code.strip().upper()
+    join_target = request.url_for('join_form').include_query_params(code=join_code)
+    if redirect := ecosystem.login_required(request, join_target.path + '?' + join_target.query):
+        return redirect
     player_name = ecosystem.display_name(request, ' '.join(player_name.split())[:60])
 
     if not player_name:
-        return templates.TemplateResponse(request=request, name="join.html", context={"request": request, "error": "Please enter your name."},
+        return templates.TemplateResponse(request=request, name="join.html", context={"request": request, "error": "Please enter your name.", "code": join_code},
             status_code=400,
         )
 
     ecosystem.lock_profiles(db)
     session = db.query(Session).filter_by(join_code=join_code).first()
     if session is None:
-        return templates.TemplateResponse(request=request, name="join.html", context={"request": request, "error": f"No session found with code '{join_code}'."},
+        return templates.TemplateResponse(request=request, name="join.html", context={"request": request, "error": f"No session found with code '{join_code}'.", "code": join_code},
             status_code=404,
         )
 
     if session.status == "ended":
-        return templates.TemplateResponse(request=request, name="join.html", context={"request": request, "error": "This session has already ended."},
+        return templates.TemplateResponse(request=request, name="join.html", context={"request": request, "error": "This session has already ended.", "code": join_code},
             status_code=400,
         )
 
     user = ecosystem.account(request)
-    persistent = user and user['kind'] == 'google'
     linked = ecosystem.owned(request, db, "player", Player, session.id)
     browser_player = db.get(Player, request.session.get("player_id", ""))
     if not (browser_player and browser_player.session_id == session.id
@@ -103,11 +107,13 @@ def join_session(
             and ecosystem.permitted(request, db, "player", browser_player)):
         browser_player = None
     existing = linked or browser_player
-    if not persistent and db.query(Player).filter_by(session_id=session.id, name=player_name).filter(
+    if not user and db.query(Player).filter_by(session_id=session.id, name=player_name).filter(
             Player.id != (existing.id if existing else '')).first():
         return templates.TemplateResponse(request=request, name="join.html", context={"request": request, "error": "That name is already taken in this session. Try adding an initial."}, status_code=400)
     if existing:
         existing.name = player_name
+        if user and user['kind'] == 'guest':
+            ecosystem.bind(request, db, 'player', existing)
         db.commit()
         ecosystem.remember_binding(request)
         request.session["player_id"] = existing.id
@@ -117,7 +123,7 @@ def join_session(
 
     # Block new player creation if the session is locked
     if session.status == "active" and session.locked:
-        return templates.TemplateResponse(request=request, name="join.html", context={"request": request, "error": "This game is already in progress and the session is locked. New players cannot join."},
+        return templates.TemplateResponse(request=request, name="join.html", context={"request": request, "error": "This game is already in progress and the session is locked. New players cannot join.", "code": join_code},
             status_code=400,
         )
 
